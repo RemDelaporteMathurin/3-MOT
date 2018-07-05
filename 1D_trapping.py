@@ -21,11 +21,13 @@ import argparse
 print('Getting the solvers')
 
 print('Defining the solving parameters')
-implantation_time=3
+fluence=1e22 #D/m2
+flux=1e18 #D/m2/s
+implantation_time=fluence/flux
 resting_time=50
-TDS_time=120.0
+TDS_time=50.0
 Time =implantation_time+resting_time+TDS_time #60000*365.25*24*3600.0# final time
-num_steps = int(implantation_time+resting_time+TDS_time)# number of time steps
+num_steps = int((implantation_time+resting_time+TDS_time))# number of time steps
 dt = Time / num_steps # time step size
 t=0 #Initialising time to 0s
 
@@ -36,7 +38,7 @@ cells=2
 
 print('Defining mesh')
 nodes=400
-size=10E-6
+size=3E-6
 #Dx=size/nodes
 mesh = IntervalMesh(nodes,0,size)
 
@@ -61,27 +63,31 @@ T_n = interpolate(iniT, V)
 
 
 ### Boundary Conditions
+tol=1e-13
 print('Defining boundary conditions')
-def boundary(x, on_boundary):
-    return on_boundary
+def boundary_L(x, on_boundary):
+    return on_boundary and (near(x[0], 0, tol))
+
+def boundary_R(x, on_boundary):
+    return on_boundary and (near(x[0], size, tol))
 ##Tritium concentration
 inside_bc_c=Expression('0', t=0, degree=1) #0.4*exp(-t*log(2)/(12.3*365.25*24*3600))
 outside_bc_c=Expression('0', t=0, degree=2)
-bci_c=DirichletBC(V,inside_bc_c,boundary)
-bco_c=DirichletBC(V,outside_bc_c,boundary)
+bci_c=DirichletBC(V,inside_bc_c,boundary_L)
+bco_c=DirichletBC(V,outside_bc_c,boundary_R)
 #g = Function(V)
 k=3.56e-8
 g = Constant(0.0)
 #g=conditional(gt(c_n, 0), k*(c_n)**0.74, Constant(0.0))#
 bcs_c=list()
 bcs_c.append(bci_c)
-#bcs_c.append(bco_c)
+bcs_c.append(bco_c)
 
 ##Temperature
 inside_bc_T=0
 outside_bc_T=Expression('14+273.15+7*cos(2*3.14*t/365.25/24/3600)+16*cos(2*3.14*t/24/3600)', t=0, degree=2)
-bci_T=DirichletBC(V,inside_bc_T,boundary)
-bco_T=DirichletBC(V,outside_bc_T,boundary)
+bci_T=DirichletBC(V,inside_bc_T,boundary_L)
+bco_T=DirichletBC(V,outside_bc_T,boundary_R)
 bcs_T=list()
 bcs_T.append(bco_T)
 def T_var(t):
@@ -141,11 +147,11 @@ c_trap3 = TrialFunction(V)#c is the tritium concentration
 n3 = TrialFunction(V)#n3 is the density of trap 3
 vc = TestFunction(V)
 
-phi=1e18 #this is the incident flux in D/m2/s
+phi=Expression('t<implantation_time ? flux : 0',implantation_time=implantation_time,flux=flux,t=0,degree=2)#this is the incident flux in D/m2/s      
 r=0.56
-fx = Expression('t<implantation_time ? 1/(width*pow(2*3.14,0.5))*exp(-0.5*(pow(x[0]/width,2))) : 0',implantation_time=implantation_time,t=0,e=size,width=1e-8,degree=2)#  This is the tritium volumetric source term   -1/(1/3*e*pow(2*3.14,0.5))*exp(-0.5*(x[0]/pow(1/3*e,2)))   (x[0]<e/100 ? -2.5e19*(1-100*x[0]/e)
+fx = Expression('1/(width*pow(2*3.14,0.5))*exp(-0.5*(pow((x[0]-center)/width,2)))',implantation_time=implantation_time,e=size,center=5e-9,width=1e-8,degree=2)#  This is the tritium volumetric source term   -1/(1/3*e*pow(2*3.14,0.5))*exp(-0.5*(x[0]/pow(1/3*e,2)))   (x[0]<e/100 ? -2.5e19*(1-100*x[0]/e)
 
-F1=((c_sol-c_sol_n)/dt)*vc*dx + D*dot(grad(c_sol), grad(vc))*dx + (-(1-r)*phi*fx+decay*c_sol)*vc*dx +(((c_trap-c_trap_n)/dt)+((c_trap2-c_trap2_n)/dt)+((c_trap3-c_trap3_n)/dt))*vc*dx+D*g*vc*ds
+F1=((c_sol-c_sol_n)/dt)*vc*dx + D*dot(grad(c_sol), grad(vc))*dx + (-(1-r)*phi/6.2e28*fx+decay*c_sol)*vc*dx +(((c_trap-c_trap_n)/dt)+((c_trap2-c_trap2_n)/dt)+((c_trap3-c_trap3_n)/dt))*vc*dx+D*g*vc*ds
 ac1,Lc1= lhs(F1),rhs(F1)
 
 
@@ -188,7 +194,7 @@ for n in range(num_steps):
   print("t= "+str(t/3600/24/365.25)+" years")
   print(str(100*t/Time)+" %")
   t += dt
-  fx.t += dt
+  phi.t += dt
 
   # Compute solution concentration
   
@@ -211,16 +217,16 @@ for n in range(num_steps):
 
   #Updating boundary conditions
   outside_bc_T.t += dt
-  bco_T=DirichletBC(V,outside_bc_T,boundary)
+  #bco_T=DirichletBC(V,outside_bc_T,boundary)
   bcs_T=list()
   bcs_T.append(bco_T)
 
 
   inside_bc_c.t += dt
-  bci_c=DirichletBC(V,inside_bc_c,boundary)
+  #bci_c=DirichletBC(V,inside_bc_c,boundary)
   bcs_c=list()
   bcs_c.append(bci_c)
-  #bcs_c.append(bco_c)
+  bcs_c.append(bco_c)
 
 
   total_trap1=assemble(c_trap*dx)
