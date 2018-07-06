@@ -1,13 +1,13 @@
 from fenics import *
 from dolfin import *
 import numpy as np
-Time = 50.0  # final time
-num_steps = 50 # number of time steps
+Time = 10.0  # final time
+num_steps = 100 # number of time steps
 dt = Time / num_steps # time step size 6912000000000
 
 # Create mesh and define function space
 nodes=100
-size=3e-6
+size=2e-3
 #Dx=size/nodes
 mesh = IntervalMesh(nodes,0,size)
 V = FunctionSpace(mesh, 'P', 1) #FunctionSpace of the solution c
@@ -33,17 +33,15 @@ def boundary_L(x, on_boundary):
 def boundary_R(x, on_boundary):
     return on_boundary and (near(x[0], size, tol))
 
-inside = 0.0
-outside = 0.0
+inside = 1.0
 bci=DirichletBC(V,inside,boundary_L)
-bco=DirichletBC(V,outside,boundary_R)
-bcs=[bci,bco]
+bcs=bci#[bci,bco]
 
 ##Defining materials properties
-D  = 1.16e-13
+D  = 1e-4
 
 # Define initial value
-iniC = Expression('2.26e24',degree=1)
+iniC = Expression('0',degree=1)
 c_n = interpolate(iniC, V)
 
 
