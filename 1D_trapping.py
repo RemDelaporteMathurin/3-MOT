@@ -38,7 +38,7 @@ cells=2
 
 print('Defining mesh')
 nodes=500
-size=2.5e-7
+size=1e-6#2.5e-7
 #Dx=size/nodes
 mesh = IntervalMesh(nodes,0,size)
 
@@ -82,7 +82,6 @@ g = Constant(0.0)
 bcs_c=list()
 bcs_c.append(bci_c)
 bcs_c.append(bco_c)
-
 ##Temperature
 inside_bc_T=0
 outside_bc_T=Expression('14+273.15+7*cos(2*3.14*t/365.25/24/3600)+16*cos(2*3.14*t/24/3600)', t=0, degree=2)
@@ -92,12 +91,12 @@ bcs_T=list()
 bcs_T.append(bco_T)
 def T_var(t):
   if t<implantation_time: 
-    return 300 
+    return 300
   elif t<implantation_time+resting_time: 
     return 300
   else:
      return 300+8*(t-(implantation_time+resting_time))
-temp=Expression('t < (implantation_time+resting_time) ? 300 : 300+8*(t-(implantation_time+resting_time))',implantation_time=implantation_time,resting_time=resting_time,t=0,degree=2)
+temp=Expression('t <= (implantation_time+resting_time) ? 300: 300+8*(t-(implantation_time+resting_time))',implantation_time=implantation_time,resting_time=resting_time,t=0,degree=2)
 
 ###Defining materials properties
 print('Defining the materials properties')
@@ -108,7 +107,7 @@ density_W=6.3e28 #density of tungsten in m^-3
 def calculate_D(T,subdomain_no):
   R=8.314 #Perfect gas constant
   if subdomain_no==0: #Steel
-    return 4.1e-7*np.exp(-0.39/(k_B*T))/(2**0.5)/1400
+    return 4.1e-7*np.exp(-0.39/(k_B*T))/(2**0.5)
 D=calculate_D(T_var(0),0)
 
 print(D)
@@ -119,7 +118,7 @@ decay=0
 
 alpha=110e-12 #lattice constant ()
 beta=6#*density_W#number of solute sites per atom (6 for W)
-v_0=2e13 #frequency factor s-1
+v_0=1e13#frequency factor s-1
 E1=0.87 #in eV trap 1 activation energy
 n1=1e-3#*density_W#trap 1 density
 E2=1.0 #in eV activation energy
@@ -140,7 +139,6 @@ q = Constant(0) #q is the volumetric heat source term
 FT = T*vT*dx + dt*thermal_diffusivity*dot(grad(T), grad(vT))*dx - (T_n + dt*q)*vT*dx #This is the heat transfer equation
 aT, LT = lhs(FT), rhs(FT) #Rearranging the equation
 
-print(alpha**2)
 
 
 c_sol = TrialFunction(V)#c is the tritium concentration
@@ -150,23 +148,22 @@ c_trap3 = TrialFunction(V)#c is the tritium concentration
 n3 = TrialFunction(V)#n3 is the density of trap 3
 vc = TestFunction(V)
 
-phi=Expression('t<implantation_time ? flux: 0',implantation_time=implantation_time,flux=flux,t=0,degree=2)#this is the incident flux in D/m2/s      
+phi=Expression('t<=implantation_time ? flux: 0',implantation_time=implantation_time,flux=flux,t=0,degree=2)#this is the incident flux in D/m2/s      
 r=0.56
 fx = Expression('1/(width*pow(2*3.14,0.5))*exp(-0.5*(pow((x[0]-center)/width,2)))',implantation_time=implantation_time,center=4.5e-9,width=2.5e-9,degree=2)#  This is the tritium volumetric source term   -1/(1/3*e*pow(2*3.14,0.5))*exp(-0.5*(x[0]/pow(1/3*e,2)))   (x[0]<e/100 ? -2.5e19*(1-100*x[0]/e)
 
-F1=((c_sol-c_sol_n)/dt)*vc*dx + D*dot(grad(c_sol), grad(vc))*dx +(-(1-r)*phi/density_W*fx+decay*c_sol)*vc*dx +(((c_trap-c_trap_n)/dt)+((c_trap2-c_trap2_n)/dt)+((c_trap3-c_trap3_n)/dt))*vc*dx+D*g*vc*ds
+F1=((c_sol-c_sol_n)/dt)*vc*dx + D*dot(grad(c_sol), grad(vc))*dx +(-(1-r)*phi/density_W*fx+decay*c_sol)*vc*dx +(c_trap-c_trap_n)/dt*vc*dx+(c_trap2-c_trap2_n)/dt*vc*dx+(c_trap3-c_trap3_n)/dt*vc*dx
 ac1,Lc1= lhs(F1),rhs(F1)
 
 
-F2=((c_trap-c_trap_n)/dt)*vc*dx - D/(alpha**2)*n1/beta*c_sol_n*(1-c_trap/n1)*vc*dx + c_trap*v_0*exp(-E1/(k_B*temp))*vc*dx
+F2=((c_trap-c_trap_n)/dt)*vc*dx - D/(alpha**2)/beta*c_sol_n*(n1-c_trap)*vc*dx + c_trap*v_0*exp(-E1/(k_B*temp))*vc*dx
 ac2,Lc2= lhs(F2),rhs(F2)
 
 
-F3=((c_trap2-c_trap2_n)/dt)*vc*dx - D/(alpha**2)*n2/beta*c_sol_n*(1-c_trap2/n2)*vc*dx + c_trap2*v_0*exp(-E2/(k_B*temp))*vc*dx
+F3=((c_trap2-c_trap2_n)/dt)*vc*dx - D/(alpha**2)/beta*c_sol_n*(n2-c_trap2)*vc*dx + c_trap2*v_0*exp(-E2/(k_B*temp))*vc*dx
 ac3,Lc3= lhs(F3),rhs(F3)
 
 
-#n3=8e-4
 F4=((c_trap3-c_trap3_n)/dt)*vc*dx - D/(alpha**2*beta)*c_sol_n*(n3_n-c_trap3)*vc*dx + c_trap3*v_0*exp(-E3/(k_B*temp))*vc*dx
 ac4,Lc4= lhs(F4),rhs(F4)
 
@@ -190,19 +187,18 @@ filedesorption="Solutions/Trapping/desorption.csv"
 desorption=list()
 total_n=0
 for n in range(num_steps):
-
-  
   # Update current time
   print("t= "+str(t)+" s")
   print("t= "+str(t/3600/24/365.25)+" years")
-  print(str(100*t/Time)+" %")
+  print(str(100*t/Time)+" %")  
   t += dt
   phi.t += dt
 
+  
+
   # Compute solution concentration
   
-  solve(ac1==Lc1,c_sol,bcs_c)
-  Solute << (c_sol,t)
+  
   solve(ac2==Lc2,c_trap,bcs_c)
   Trap1 << (c_trap,t)
   solve(ac3==Lc3,c_trap2,bcs_c)
@@ -211,6 +207,9 @@ for n in range(num_steps):
   n3F << (n3,t)
   solve(ac4==Lc4,c_trap3,bcs_c)
   Trap3 << (c_trap3,t)
+  solve(ac1==Lc1,c_sol,bcs_c)
+  Solute << (c_sol,t)
+
   # Compute solution temperature
   #if solve_temperature==True:
   #solve(aT == LT, T, bcs_T)
@@ -237,18 +236,19 @@ for n in range(num_steps):
   total_trap3=assemble(c_trap3*dx)
   total_trap=total_trap1+total_trap2+total_trap3
   total_sol=assemble(c_sol*dx)
-  total=total_sol+total_trap
-  desorption_rate=[-(total-total_n)*density_W/dt,T_var(t-dt)]
+  total=total_trap+total_sol
+  desorption_rate=[-(total-total_n)*density_W/dt,T_var(t),t]
   total_n=total
-  
+  if t==450:
+    valeur=total
   if t>implantation_time+resting_time:
     desorption.append(desorption_rate)
-    print('Total of D soluble = ' + str(total_sol))
-    print('Total of D traped 1= ' + str(total_trap1))
-    print('Total of D traped 2= ' + str(total_trap2))
-    print('Total of D traped 3= ' + str(total_trap3))
-    print("Total of D = "+str(total))
-    print("Desorption rate = " + str(desorption_rate))
+    #print('Total of D soluble = ' + str(total_sol))
+    #print('Total of D traped 1= ' + str(total_trap1))
+    #print('Total of D traped 2= ' + str(total_trap2))
+    #print('Total of D traped 3= ' + str(total_trap3))
+    #print("Total of D = " + str(total))
+    #print("Desorption rate = " + str(desorption_rate))
 
 
 
@@ -268,6 +268,8 @@ for n in range(num_steps):
 
 with open(filedesorption, "w") as output:
     writer = csv.writer(output, lineterminator='\n')
-    writer.writerows(['dT'])
+    writer.writerows(['dTt'])
     for val in desorption:
         writer.writerows([val])#
+
+print(valeur)
