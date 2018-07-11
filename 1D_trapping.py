@@ -34,11 +34,10 @@ t=0 #Initialising time to 0s
 print(Time)
 print(num_steps)
 
-cells=2
 
 print('Defining mesh')
 nodes=500
-size=1e-6#2.5e-7
+size=3e-6#2.5e-7
 #Dx=size/nodes
 mesh = IntervalMesh(nodes,0,size)
 
@@ -75,20 +74,14 @@ inside_bc_c=Expression('0', t=0, degree=1) #0.4*exp(-t*log(2)/(12.3*365.25*24*36
 outside_bc_c=Expression('0', t=0, degree=2)
 bci_c=DirichletBC(V,inside_bc_c,boundary_L)
 bco_c=DirichletBC(V,outside_bc_c,boundary_R)
-#g = Function(V)
-k=3.56e-8
+
 g = Constant(0.0)
-#g=conditional(gt(c_n, 0), k*(c_n)**0.74, Constant(0.0))#
+
 bcs_c=list()
 bcs_c.append(bci_c)
 bcs_c.append(bco_c)
 ##Temperature
-inside_bc_T=0
-outside_bc_T=Expression('14+273.15+7*cos(2*3.14*t/365.25/24/3600)+16*cos(2*3.14*t/24/3600)', t=0, degree=2)
-bci_T=DirichletBC(V,inside_bc_T,boundary_L)
-bco_T=DirichletBC(V,outside_bc_T,boundary_R)
-bcs_T=list()
-bcs_T.append(bco_T)
+
 def T_var(t):
   if t<implantation_time: 
     return 300
@@ -103,16 +96,20 @@ print('Defining the materials properties')
 
 
 k_B=8.6173303e-5 #Boltzann constant eV/K
-density_W=6.3e28 #density of tungsten in m^-3
+density_W=6e28 #density of tungsten in m^-3
 def calculate_D(T,subdomain_no):
   R=8.314 #Perfect gas constant
   if subdomain_no==0: #Steel
     return 4.1e-7*np.exp(-0.39/(k_B*T))/(2**0.5)
-D=calculate_D(T_var(0),0)
 
-print(D)
-thermal_diffusivity=67.9e-16
-decay=0
+D=Function(V0)
+
+for cell in cells(mesh):
+  cell_no=cell.index()
+  D.vector()[cell_no] = calculate_D(T_var(0),0)
+  #print('coucou')
+
+#print(D)
 
 
 
@@ -125,7 +122,7 @@ E2=1.0 #in eV activation energy
 n2=4e-4#*density_W #trap 2 density
 E3=1.5 #in eV activation energy
 xp=1e-6
-teta=Expression('x[0]<xp ? 1/xp :0',xp=xp,degree=2)
+teta=Expression('x[0]<=xp ? 1/xp :0',xp=xp,degree=2)
 n3amax=1e-1#*density_W
 n3a=6e-4
 n3bmax=1e-2#*density_W
@@ -133,11 +130,6 @@ n3b=2e-4
 ### Define variational problem
 print('Defining the variational problem')
 
-T = TrialFunction(V) #T is the temperature
-vT = TestFunction(V)
-q = Constant(0) #q is the volumetric heat source term
-FT = T*vT*dx + dt*thermal_diffusivity*dot(grad(T), grad(vT))*dx - (T_n + dt*q)*vT*dx #This is the heat transfer equation
-aT, LT = lhs(FT), rhs(FT) #Rearranging the equation
 
 
 
@@ -152,17 +144,14 @@ phi=Expression('t<=implantation_time ? flux: 0',implantation_time=implantation_t
 r=0.56
 fx = Expression('1/(width*pow(2*3.14,0.5))*exp(-0.5*(pow((x[0]-center)/width,2)))',implantation_time=implantation_time,center=4.5e-9,width=2.5e-9,degree=2)#  This is the tritium volumetric source term   -1/(1/3*e*pow(2*3.14,0.5))*exp(-0.5*(x[0]/pow(1/3*e,2)))   (x[0]<e/100 ? -2.5e19*(1-100*x[0]/e)
 
-F1=((c_sol-c_sol_n)/dt)*vc*dx + D*dot(grad(c_sol), grad(vc))*dx +(-(1-r)*phi/density_W*fx+decay*c_sol)*vc*dx +(c_trap-c_trap_n)/dt*vc*dx+(c_trap2-c_trap2_n)/dt*vc*dx+(c_trap3-c_trap3_n)/dt*vc*dx
+F1=((c_sol-c_sol_n)/dt)*vc*dx + D*dot(grad(c_sol), grad(vc))*dx -(1-r)*phi/density_W*fx*vc*dx +(c_trap-c_trap_n)/dt*vc*dx+(c_trap2-c_trap2_n)/dt*vc*dx+(c_trap3-c_trap3_n)/dt*vc*dx
 ac1,Lc1= lhs(F1),rhs(F1)
 
-
-F2=((c_trap-c_trap_n)/dt)*vc*dx - D/(alpha**2)/beta*c_sol_n*(n1-c_trap)*vc*dx + c_trap*v_0*exp(-E1/(k_B*temp))*vc*dx
+F2=((c_trap-c_trap_n)/dt)*vc*dx - D/(alpha**2*beta)*c_sol_n*(n1-c_trap)*vc*dx + c_trap*v_0*exp(-E1/(k_B*temp))*vc*dx
 ac2,Lc2= lhs(F2),rhs(F2)
 
-
-F3=((c_trap2-c_trap2_n)/dt)*vc*dx - D/(alpha**2)/beta*c_sol_n*(n2-c_trap2)*vc*dx + c_trap2*v_0*exp(-E2/(k_B*temp))*vc*dx
+F3=((c_trap2-c_trap2_n)/dt)*vc*dx - D/(alpha**2*beta)*c_sol_n*(n2-c_trap2)*vc*dx + c_trap2*v_0*exp(-E2/(k_B*temp))*vc*dx
 ac3,Lc3= lhs(F3),rhs(F3)
-
 
 F4=((c_trap3-c_trap3_n)/dt)*vc*dx - D/(alpha**2*beta)*c_sol_n*(n3_n-c_trap3)*vc*dx + c_trap3*v_0*exp(-E3/(k_B*temp))*vc*dx
 ac4,Lc4= lhs(F4),rhs(F4)
@@ -171,7 +160,7 @@ Fn3=((n3-n3_n)/dt)*vc*dx-(1-r)*phi/density_W*((1-n3/n3amax)*n3a*fx+(1-n3/n3bmax)
 acn3,Lcn3=lhs(Fn3),rhs(Fn3)
 
 ### Time-stepping
-T = Function(V)
+
 c_sol=Function(V)
 c_trap=Function(V)
 c_trap2=Function(V)
@@ -193,12 +182,13 @@ for n in range(num_steps):
   print(str(100*t/Time)+" %")  
   t += dt
   phi.t += dt
-
+  temp.t +=dt
   
 
   # Compute solution concentration
   
-  
+  solve(ac1==Lc1,c_sol,bcs_c)
+  Solute << (c_sol,t) 
   solve(ac2==Lc2,c_trap,bcs_c)
   Trap1 << (c_trap,t)
   solve(ac3==Lc3,c_trap2,bcs_c)
@@ -207,24 +197,17 @@ for n in range(num_steps):
   n3F << (n3,t)
   solve(ac4==Lc4,c_trap3,bcs_c)
   Trap3 << (c_trap3,t)
-  solve(ac1==Lc1,c_sol,bcs_c)
-  Solute << (c_sol,t)
+  solve(acn3==Lcn3,n3,bcs_c)
+  n3F << (n3,t)
+  solve(ac4==Lc4,c_trap3,bcs_c)
+  Trap3 << (c_trap3,t) 
 
   # Compute solution temperature
-  #if solve_temperature==True:
-  #solve(aT == LT, T, bcs_T)
-  #fileT << (T,t)
+
 
 
 
   #Updating boundary conditions
-  outside_bc_T.t += dt
-  #bco_T=DirichletBC(V,outside_bc_T,boundary)
-  bcs_T=list()
-  bcs_T.append(bco_T)
-
-
-  inside_bc_c.t += dt
   #bci_c=DirichletBC(V,inside_bc_c,boundary)
   bcs_c=list()
   bcs_c.append(bci_c)
@@ -239,8 +222,8 @@ for n in range(num_steps):
   total=total_trap+total_sol
   desorption_rate=[-(total-total_n)*density_W/dt,T_var(t),t]
   total_n=total
-  if t==450:
-    valeur=total
+  if t==implantation_time+resting_time:
+    valeur=total*density_W
   if t>implantation_time+resting_time:
     desorption.append(desorption_rate)
     #print('Total of D soluble = ' + str(total_sol))
@@ -251,19 +234,19 @@ for n in range(num_steps):
     #print("Desorption rate = " + str(desorption_rate))
 
 
-
+  value=calculate_D(T_var(t),0)
   # Update previous solution
-  temp.t +=dt
+  for cell in cells(mesh):
+    cell_no=cell.index()
+    D.vector()[cell_no] = value 
 
   c_sol_n.assign(c_sol)
   c_trap_n.assign(c_trap)
   c_trap2_n.assign(c_trap2)
   c_trap3_n.assign(c_trap3)
   n3_n.assign(n3)
-  T_n.assign(T)
-  D=calculate_D(T_var(t),0)
   print('T = ' + str(T_var(t))+' K')
-  print('D = ' +str(D))
+  print('D = ' +str(calculate_D(T_var(t),0)))
 
 
 with open(filedesorption, "w") as output:
@@ -272,4 +255,4 @@ with open(filedesorption, "w") as output:
     for val in desorption:
         writer.writerows([val])#
 
-print(valeur)
+print('Total retention before TDS = '+ str(valeur) + 'D/m2')
