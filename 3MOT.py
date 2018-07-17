@@ -5,6 +5,7 @@ import csv
 import sys
 import os
 import argparse
+import json
 
 
 #os.system('dolfin-convert geo/mesh.inp geo/coucou.xml')
@@ -18,7 +19,9 @@ import argparse
 
 #steel_thickness = float(args.thickness)
 
-
+print('Getting the databases')
+materialDB='3-MOT_materials.json'
+_3-MOT_parameters='3-MOT_parameters.json'
 
 print('Getting the solvers')
 solve_temperature=False
