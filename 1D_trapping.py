@@ -36,8 +36,8 @@ print(num_steps)
 
 
 print('Defining mesh')
-nodes=500
-size=3e-6#2.5e-7
+nodes=5000
+size=1e-6#2.5e-7
 #Dx=size/nodes
 mesh = IntervalMesh(nodes,0,size)
 
@@ -103,7 +103,6 @@ def calculate_D(T,subdomain_no):
     return 4.1e-7*np.exp(-0.39/(k_B*T))/(2**0.5)
 
 D=Function(V0)
-
 for cell in cells(mesh):
   cell_no=cell.index()
   D.vector()[cell_no] = calculate_D(T_var(0),0)
@@ -114,24 +113,21 @@ for cell in cells(mesh):
 
 
 alpha=110e-12 #lattice constant ()
-beta=6#*density_W#number of solute sites per atom (6 for W)
+beta=6*density_W#number of solute sites per atom (6 for W)
 v_0=1e13#frequency factor s-1
 E1=0.87 #in eV trap 1 activation energy
-n1=1e-3#*density_W#trap 1 density
+n1=1e-3*density_W#trap 1 density
 E2=1.0 #in eV activation energy
-n2=4e-4#*density_W #trap 2 density
+n2=4e-4*density_W #trap 2 density
 E3=1.5 #in eV activation energy
 xp=1e-6
 teta=Expression('x[0]<=xp ? 1/xp :0',xp=xp,degree=2)
-n3amax=1e-1#*density_W
-n3a=6e-4
-n3bmax=1e-2#*density_W
-n3b=2e-4
+n3amax=1e-1*density_W
+n3a=6e-4#*density_W
+n3bmax=1e-2*density_W
+n3b=2e-4#*density_W
 ### Define variational problem
 print('Defining the variational problem')
-
-
-
 
 c_sol = TrialFunction(V)#c is the tritium concentration
 c_trap = TrialFunction(V)#c is the tritium concentration
@@ -142,9 +138,9 @@ vc = TestFunction(V)
 
 phi=Expression('t<=implantation_time ? flux: 0',implantation_time=implantation_time,flux=flux,t=0,degree=2)#this is the incident flux in D/m2/s      
 r=0.56
-fx = Expression('1/(width*pow(2*3.14,0.5))*exp(-0.5*(pow((x[0]-center)/width,2)))',implantation_time=implantation_time,center=4.5e-9,width=2.5e-9,degree=2)#  This is the tritium volumetric source term   -1/(1/3*e*pow(2*3.14,0.5))*exp(-0.5*(x[0]/pow(1/3*e,2)))   (x[0]<e/100 ? -2.5e19*(1-100*x[0]/e)
+fx = Expression('1/(width*pow(2*3.14,0.5))*exp(-0.5*(pow((x[0]-center)/width,2)))',center=4.5e-9,width=2.5e-9,degree=2)#  This is the tritium volumetric source term   -1/(1/3*e*pow(2*3.14,0.5))*exp(-0.5*(x[0]/pow(1/3*e,2)))   (x[0]<e/100 ? -2.5e19*(1-100*x[0]/e)
 
-F1=((c_sol-c_sol_n)/dt)*vc*dx + D*dot(grad(c_sol), grad(vc))*dx -(1-r)*phi/density_W*fx*vc*dx +(c_trap-c_trap_n)/dt*vc*dx+(c_trap2-c_trap2_n)/dt*vc*dx+(c_trap3-c_trap3_n)/dt*vc*dx
+F1=((c_sol-c_sol_n)/dt)*vc*dx + D*dot(grad(c_sol), grad(vc))*dx -(1-r)*phi*fx*vc*dx +(c_trap-c_trap_n)/dt*vc*dx+(c_trap2-c_trap2_n)/dt*vc*dx+(c_trap3-c_trap3_n)/dt*vc*dx
 ac1,Lc1= lhs(F1),rhs(F1)
 
 F2=((c_trap-c_trap_n)/dt)*vc*dx - D/(alpha**2*beta)*c_sol_n*(n1-c_trap)*vc*dx + c_trap*v_0*exp(-E1/(k_B*temp))*vc*dx
@@ -156,7 +152,7 @@ ac3,Lc3= lhs(F3),rhs(F3)
 F4=((c_trap3-c_trap3_n)/dt)*vc*dx - D/(alpha**2*beta)*c_sol_n*(n3_n-c_trap3)*vc*dx + c_trap3*v_0*exp(-E3/(k_B*temp))*vc*dx
 ac4,Lc4= lhs(F4),rhs(F4)
 
-Fn3=((n3-n3_n)/dt)*vc*dx-(1-r)*phi/density_W*((1-n3/n3amax)*n3a*fx+(1-n3/n3bmax)*n3b*teta)*vc*dx
+Fn3=((n3-n3_n)/dt)*vc*dx-(1-r)*phi*((1-n3/n3amax)*n3a*fx+(1-n3/n3bmax)*n3b*teta)*vc*dx
 acn3,Lcn3=lhs(Fn3),rhs(Fn3)
 
 ### Time-stepping
@@ -187,24 +183,34 @@ for n in range(num_steps):
 
   # Compute solution concentration
   
+  
   solve(ac1==Lc1,c_sol,bcs_c)
   Solute << (c_sol,t) 
-  solve(ac2==Lc2,c_trap,bcs_c)
+  
+  #solve(ac2==Lc2,c_trap,bcs_c)
+  #Trap1 << (c_trap,t)
+  
+  #solve(ac3==Lc3,c_trap2,bcs_c)
+  #Trap2 << (c_trap2,t)
+
+  #solve(acn3==Lcn3,n3,bcs_c)
+  #n3F << (n3,t)
+
+  #solve(ac4==Lc4,c_trap3,bcs_c)
+  #Trap3 << (c_trap3,t)
+  
+
+  solve(ac2==Lc2,c_trap,[])
   Trap1 << (c_trap,t)
-  solve(ac3==Lc3,c_trap2,bcs_c)
+  
+  solve(ac3==Lc3,c_trap2,[])
   Trap2 << (c_trap2,t)
-  solve(acn3==Lcn3,n3,bcs_c)
+
+  solve(acn3==Lcn3,n3,[])
   n3F << (n3,t)
-  solve(ac4==Lc4,c_trap3,bcs_c)
+
+  solve(ac4==Lc4,c_trap3,[])
   Trap3 << (c_trap3,t)
-  solve(acn3==Lcn3,n3,bcs_c)
-  n3F << (n3,t)
-  solve(ac4==Lc4,c_trap3,bcs_c)
-  Trap3 << (c_trap3,t) 
-
-  # Compute solution temperature
-
-
 
 
   #Updating boundary conditions
