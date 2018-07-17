@@ -1,0 +1,47 @@
+{
+    "quality" : "10",
+
+    "outputfile" : "mesh_and_markers.xdmf",
+
+    "structure_and_materials": [{"step_file":"geometry_files/breeder_blanket/slice_armour_mod1.step",
+                                 "material":"tungsten",
+                                 "material_id":1},
+
+                                {"step_file":"geometry_files/breeder_blanket/slice_back_lithium_lead_mod1.step",
+                                 "material":"lithium_lead",
+                                 "material_id":2},
+
+                                {"step_file":"geometry_files/breeder_blanket/slice_back_plate_1_mod1.step",
+                                 "material":"eurofer",
+                                 "material_id":3},
+
+                                {"step_file":"geometry_files/breeder_blanket/slice_back_plate_2_mod1.step",
+                                 "material":"eurofer",
+                                 "material_id":3},
+
+                                {"step_file":"geometry_files/breeder_blanket/slice_back_plate_3_mod1.step",
+                                 "material":"eurofer",
+                                 "material_id":3},
+
+                                {"step_file":"geometry_files/breeder_blanket/slice_cooling_plate_material_mod1.step",
+                                 "material":"eurofer",
+                                 "material_id":3},
+
+                                {"step_file":"geometry_files/breeder_blanket/slice_first_wall_material_mod1.step",
+                                 "material":"eurofer",
+                                 "material_id":3},
+
+                                {"step_file":"geometry_files/breeder_blanket/slice_lithium_lead_mod1.step",
+                                 "material":"lithium_lead",
+                                 "material_id":2}
+                               ],
+
+    "neumann_surfaces":[4,1,7], // here the structure should be [ (surfacea_number,valuea of gradu ),(surfaceb_number,valueb of gradu ) ]
+    "DC_surfaces":[], // here the structure should be [ (surface1_number,value1 of u ),(surface2_number,value2 of u ) ]
+    "Robin_surfaces":[], // here the structure should be [ (surfacealpha_number,f1(u) ),(surfacebeta_number,f2(u) ) ] Careful : fi must be understood by Fenics. 
+
+    
+    "void" : ["geometry_files/breeder_blanket/slice_first_wall_coolant_mod1.step",
+              "geometry_files/breeder_blanket/slice_cooling_plate_coolant_mod1.step",
+              "geometry_files/breeder_blanket/slice_back_helium_mod1.step"] //todo remove the void files, we shouldn't need them
+}
