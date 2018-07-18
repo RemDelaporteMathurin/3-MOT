@@ -15,7 +15,7 @@
 
                                 {"step_file":"geometry_files/breeder_blanket/slice_back_plate_1_mod1.step",
                                  "material":"eurofer",
-                                 "material_id":3},
+                                 "material_id":3,
 
                                 {"step_file":"geometry_files/breeder_blanket/slice_back_plate_2_mod1.step",
                                  "material":"eurofer",
@@ -38,17 +38,17 @@
                                  "material_id":2}
                                ],
 
-    "Physics": {
-      "Solve_with_decay":1,
-      "Solve_Tritium_Diffusion":1,
-      "Solve_Heat_Transfer":1,
-      "Diffusion_coeff_temperature_dependent":1,
-      "Calculate_off_gassing":1,
+   "physics": {
+      "solve_with_decay":1,
+      "solve_tritium_diffusion":1,
+      "solve_heat_transfer":1,
+      "diffusion_coeff_temperature_dependent":1,
+      "calculate_off_gassing":1,
 
 
 
-      "Heat_Transfers":{
-        "Boundary_conditions":{
+      "heat_transfers":{
+        "boundary_conditions":{
           "neumann":[
             {
               "surface":4,
@@ -63,7 +63,7 @@
               "value":0.5e6
             }
               ],
-          "DC":[
+          "dc":[
             {
               "surface":2,
               "value":0
@@ -77,7 +77,7 @@
               "value":0
             }
           ],
-          "Robin":[
+          "robin":[
             {
               "surface":5,
               "h_coeff":3500,
@@ -87,17 +87,17 @@
               "surface":6,
               "h_coeff":3500,
               "t_amb":500
-            },
-          ],
+            }
+          ]
         },
-        "Initial_value":0, //todo differenciate the initial value for each volume
-        "Source_term":0,  //todo differenciate the source term for each volume
+        "initial_value":0, 
+        "source_term":0 
       },
 
 
 
-      "Tritium_Diffusion":{
-        "Boundary_conditions":{
+      "tritium_diffusion":{
+        "boundary_conditions":{
           "neumann":[
             {
               "surface":4,
@@ -112,7 +112,7 @@
               "value":0.5e6
             }
               ],
-          "DC":[
+          "dc":[
             {
               "surface":2,
               "value":0
@@ -126,29 +126,25 @@
               "value":0
             }
           ],
-          "Robin":[
+          "robin":[
             {
               "surface":5,
               "expression":"x[0]+2*x[1]+t"
             },
             {
               "surface":6,
-              
-            },
-          ],
+              "expression":"x[0]+2*x[1]+t"
+            }
+          ]
         },
-        "Initial_value":0, //todo differenciate the initial value for each volume
-        "Source_term":0, //todo differenciate the source term for each volume
+
+        "initial_value": 0,
+        "source_term": 0
       }
     },
 
-    "Solving_parameters":{
-      "Final_Time":10, //Final time in s
-      "Number_of_time_steps":10 //Number of time step
-    },
-
-    
-    "void" : ["geometry_files/breeder_blanket/slice_first_wall_coolant_mod1.step",
-              "geometry_files/breeder_blanket/slice_cooling_plate_coolant_mod1.step",
-              "geometry_files/breeder_blanket/slice_back_helium_mod1.step"] //todo remove the void files, we shouldn't need them
+    "solving_parameters":{
+      "final_time":10, 
+      "number_of_time_steps":10 
+    }
 }

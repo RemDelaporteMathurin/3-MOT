@@ -1,6 +1,5 @@
 import xml.etree.ElementTree as ET
 
-from trelis_mesh_functions import *
 
 def find_number_of_volumes_in_each_step_file(input_locations):
     body_ids=''
@@ -60,7 +59,6 @@ def find_external_surfaces():
         list_of_unmerged_surfaces.append(surface)
   print('list_of_external_surfaces',list_of_external_surfaces)
   return list_of_unmerged_surfaces
-
 
 def byteify(input):
     if isinstance(input, dict):
