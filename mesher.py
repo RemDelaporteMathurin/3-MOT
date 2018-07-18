@@ -1,5 +1,7 @@
 import xml.etree.ElementTree as ET
 
+# trelis mesher.py "quality='10'" "outputfile='mesh_and_markers.xdmf'" "structure='slice_armour_mod1.step,slice_back_lithium_lead_mod1.step,slice_back_plate_1_mod1.step,slice_back_plate_2_mod1.step,slice_back_plate_3_mod1.step,slice_cooling_plate_material_mod1.step,slice_first_wall_material_mod1.step,slice_lithium_lead_mod1.step,'" "coolant='slice_first_wall_coolant_mod1.step,slice_cooling_plate_coolant_mod1.step,slice_back_helium_mod1.step'"
+
 
 def find_number_of_volumes_in_each_step_file(input_locations):
     body_ids=''
@@ -168,6 +170,11 @@ nodes_in_tests_list=[]
 for tet_id in tets_in_volumes:
     nodes_in_tets = cubit.parse_cubit_list("node"," in tet "+str(tet_id))
     nodes_in_tests_list.append(nodes_in_tets)
+
+
+
+
+
 
 
 
