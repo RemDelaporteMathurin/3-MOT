@@ -1,0 +1,10 @@
+## trelis
+## Trelis Version 16.4
+## Trelis Build 6bc00df
+## Revised Thu Oct 26 13:42:30 2017 -0400
+## Running 07/18/2018 03:02:46 pm
+## Command Options:
+undo on
+reset
+merge tolerance 1e-06
+merge all

@@ -1,0 +1,161 @@
+{
+    "quality" : "10",
+
+    "mesh_file" : "mesh_and_markers.xdmf",
+
+    "field_file" : "output_mesh_file.xdmf",
+
+    "structure_and_materials": [{"step_file":"geometry_files/breeder_blanket/slice_armour_mod1.step",
+                                 "material":"tungsten",
+                                 "material_id":1,
+                                 "diffusivity":60e-6},
+
+                                {"step_file":"geometry_files/breeder_blanket/slice_back_lithium_lead_mod1.step",
+                                 "material":"lithium_lead",
+                                 "material_id":2,
+                                 "diffusivity":1.8e-5},
+
+                                {"step_file":"geometry_files/breeder_blanket/slice_back_plate_1_mod1.step",
+                                 "material":"eurofer",
+                                 "material_id":3,
+                                 "diffusivity":1.8e-5},
+
+                                {"step_file":"geometry_files/breeder_blanket/slice_back_plate_2_mod1.step",
+                                 "material":"eurofer",
+                                 "material_id":3,
+                                 "diffusivity":1.8e-5},
+
+                                {"step_file":"geometry_files/breeder_blanket/slice_back_plate_3_mod1.step",
+                                 "material":"eurofer",
+                                 "material_id":3,
+                                 "diffusivity":1.8e-5},
+
+                                {"step_file":"geometry_files/breeder_blanket/slice_cooling_plate_material_mod1.step",
+                                 "material":"eurofer",
+                                 "material_id":3,
+                                 "diffusivity":1.8e-5},
+
+                                {"step_file":"geometry_files/breeder_blanket/slice_first_wall_material_mod1.step",
+                                 "material":"eurofer",
+                                 "material_id":3,
+                                 "diffusivity":1.8e-5},
+
+                                {"step_file":"geometry_files/breeder_blanket/slice_lithium_lead_mod1.step",
+                                 "material":"lithium_lead",
+                                 "material_id":2,
+                                   "diffusivity":1.8e-5}
+                               ],
+
+   "physics": {
+      "solve_with_decay":1,
+      "solve_tritium_diffusion":1,
+      "solve_heat_transfer":1,
+      "diffusion_coeff_temperature_dependent":1,
+      "calculate_off_gassing":1,
+
+      "heat_transfers":{
+        "boundary_conditions":{
+          "neumann":[
+            {
+              "surface":4,
+              "value":0.5e6
+            },
+            {
+              "surface":1,
+              "value":0.5e6
+            },
+            {
+              "surface":7,
+              "value":0.5e6
+            }
+              ],
+          "dc":[
+            {
+              "surface":2,
+              "value":0
+            },
+            {
+              "surface":3,
+              "value":0
+            },
+            {
+              "surface":8,
+              "value":0
+            }
+          ],
+          "robin":[
+            {
+              "surface":5,
+              "h_coeff":3500,
+              "t_amb":500
+            },
+            {
+              "surface":6,
+              "h_coeff":3500,
+              "t_amb":500
+            }
+          ]
+        },
+        "initial_value":0, 
+        "source_term":"volume_marker_source" 
+      },
+
+
+
+      "tritium_diffusion":{
+        "boundary_conditions":{
+          "neumann":[
+            {
+              "surface":4,
+              "value":0.5e6
+            },
+            {
+              "surface":1,
+              "value":0.5e6
+            },
+            {
+              "surface":7,
+              "value":0.5e6
+            }
+              ],
+          "dc":[
+            {
+              "surface":2,
+              "value":0
+            },
+            {
+              "surface":3,
+              "value":0
+            },
+            {
+              "surface":8,
+              "value":0
+            }
+          ],
+          "robin":[
+            {
+              "surface":5,
+              "expression":"x[0]+2*x[1]+t"
+            },
+            {
+              "surface":6,
+              "expression":"x[0]+2*x[1]+t"
+            }
+          ]
+        },
+
+        "initial_value": 0,
+        "source_term": 0
+      }
+    },
+
+    "solving_parameters":{
+      "final_time":10, 
+      "number_of_time_steps":10 
+    },
+
+    
+    "void" : ["geometry_files/breeder_blanket/slice_first_wall_coolant_mod1.step",
+              "geometry_files/breeder_blanket/slice_cooling_plate_coolant_mod1.step",
+              "geometry_files/breeder_blanket/slice_back_helium_mod1.step"]
+}
