@@ -1,8 +1,0 @@
-geometry_files/breeder_blanket/slice_armour_mod1.step 1
-geometry_files/breeder_blanket/slice_back_lithium_lead_mod1.step 2
-geometry_files/breeder_blanket/slice_back_plate_1_mod1.step 3
-geometry_files/breeder_blanket/slice_back_plate_2_mod1.step 4
-geometry_files/breeder_blanket/slice_back_plate_3_mod1.step 5
-geometry_files/breeder_blanket/slice_cooling_plate_material_mod1.step 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22
-geometry_files/breeder_blanket/slice_first_wall_material_mod1.step 23 24 25 26 27
-geometry_files/breeder_blanket/slice_lithium_lead_mod1.step 28 29
