@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
-
+import json
+from pprint import pprint
 
 def find_number_of_volumes_in_each_step_file(input_locations):
     body_ids=''
@@ -57,7 +58,7 @@ def find_external_surfaces():
       elif is_merged == False:
         cubit.cmd('color surface '+str(surface)+ ' red')
         list_of_unmerged_surfaces.append(surface)
-  print('list_of_external_surfaces',list_of_external_surfaces)
+  print('external surface ids =',list_of_unmerged_surfaces)
   return list_of_unmerged_surfaces
 
 def byteify(input):
@@ -72,37 +73,24 @@ def byteify(input):
         return input
 
 def read_arguments_from_json_file(aprepro_vars):
+  print('reading arguments from json file')
   json_input = str(cubit.get_aprepro_value_as_string("json_input"))
   print('json_inputfile ='+str(json_input))
   with open(json_input) as f:
     data = json.load(f)
-    pprint(data)
+  pprint(data)
   data=byteify(data)
-  quality= data["quality"]
-  outputfile = data["outputfile"]
-  coolant_step_files= data["void"] #todo rename coolant by void
-  structure_step_files= data["structure"]
-  return quality, outputfile, coolant_step_files, structure_step_files
+  structure_and_materials=data["structure_and_materials"]
+  structure_step_files=[]
+  material_ids=[]
+  for entry in structure_and_materials:
+    structure_step_files.append(entry['step_file'])
+    material_ids.append(entry['material_id'])
+  data['structure_step_files'] = structure_step_files
+  data['material_ids'] = material_ids
+  return data
 
-def read_arguments_from_terminal_input(aprepro_vars):
-  if "quality" in aprepro_vars:
-    quality = str(cubit.get_aprepro_value_as_string("quality"))
-    print('quality ='+str(quality))  
-  else:
-    quality = '10'
-  if "outputfile" in aprepro_vars:
-    outputfile = str(cubit.get_aprepro_value_as_string("outputfile"))
-    print('outputfile ='+str(outputfile))  
-  else:
-    outputfile = 'mesh_and_markers.xdmf'
-  if "coolant" in aprepro_vars:
-    coolant_step_files = cubit.get_aprepro_value_as_string("coolant").split(',')
-    print('coolant geometry file ='+str(coolant_step_files))
-  if "structure" in aprepro_vars:
-    structure_step_files = cubit.get_aprepro_value_as_string("structure").split(',')
-    print('structure geometry files ='+str(structure_step_files))
-    print('number of structure geometry files ='+str(len(structure_step_files)))
-  return quality, outputfile, coolant_step_files, structure_step_files
+
 
 def mesh_and_remesh_till_done(quality):
   cubit.cmd('volume all scheme Tetmesh')
@@ -135,18 +123,21 @@ for var_name in aprepro_vars:
   val = cubit.get_aprepro_value_as_string(var_name)
   print("{0} = {1}".format(var_name, val))
 
+if "json_input" in aprepro_vars:
+  json_data= read_arguments_from_json_file(aprepro_vars)
+
 
 cubit.cmd('reset')
 
-volumes_in_structure_step_files = find_number_of_volumes_in_each_step_file(structure_step_files)
+volumes_in_structure_step_files = find_number_of_volumes_in_each_step_file(json_data['structure_step_files'])
 print('volumes_in_each_step_file',volumes_in_structure_step_files)
 
 f1 = open('structure_step_file_and_volumes.txt', 'w') 
-for structure_step_file,volumes_in_structure_step_file in zip(structure_step_files , volumes_in_structure_step_files):
+for structure_step_file,volumes_in_structure_step_file in zip(json_data['structure_step_files'] , volumes_in_structure_step_files):
   f1.write(structure_step_file +' ' + ' '.join(str(i) for i in volumes_in_structure_step_file) +'\n')
 f1.close()
 
-volumes_in_coolant_step_file = find_number_of_volumes_in_each_step_file(coolant_step_files)
+volumes_in_coolant_step_file = find_number_of_volumes_in_each_step_file(json_data['coolant_step_files'])
 print('volumes_in_each_step_file',volumes_in_coolant_step_file)
 
 cubit.cmd('imprint body all')
@@ -154,7 +145,7 @@ cubit.cmd('merge tolerance 1.e-6')
 cubit.cmd('merge all')
 
 
-mesh_and_remesh_till_done(quality)
+mesh_and_remesh_till_done(json_data['quality'])
 
 nodes_in_volumes = sorted(cubit.parse_cubit_list("node"," in volume all "))
 nodal_coordinates_list = []
@@ -211,8 +202,13 @@ DataItem.set('Format','XML')
 string_of_text=''
 for tet_id in tets_in_volumes:
     nodes_in_tets=cubit.parse_cubit_list("node"," in tet "+str(tet_id))
-    string_of_text += str(nodes_in_tets(0)-1)+' '+str(nodes_in_tets(1)-1)+' '+str(nodes_in_tets(2)-1)+' '+str(nodes_in_tets(3)-1)+'\n'
-cells.text=string_of_text
+    #string_of_text += str(nodes_in_tets[0]-1)+' '+str(nodes_in_tets[1]-1)+' '+str(nodes_in_tets[2]-1)+' '+str(nodes_in_tets[3]-1)+'\n'
+    string_of_text += ' '.join([str(nodes_in_tets[0]-1),
+                                str(nodes_in_tets[1]-1),
+                                str(nodes_in_tets[2]-1),
+                                str(nodes_in_tets[3]-1),
+                                '\n'])
+DataItem.text=string_of_text
 
 
 #Writing the coordinates of all the nodes in the mesh
@@ -223,8 +219,15 @@ DataItem.set('Dimensions',str(len(nodal_coordinates_list))+' 3')
 DataItem.set('Format','XML')
 string_of_text=''
 for coords in nodal_coordinates_list:
-    string_of_text += str(coords(0))+' '+str(coords(1))+' '+str(coords(2))+'\n'
+    string_of_text += str(coords[0])+' '+str(coords[1])+' '+str(coords[2])+'\n'
 DataItem.text=string_of_text
+
+volume_id_to_material_id_dict={}
+for volume_ids, material_id in zip(volumes_in_structure_step_files,json_data['material_ids']):
+  for volume_id in volume_ids:
+    volume_id_to_material_id_dict[int(volume_id)]=material_id
+
+print('volume_id_to_material_id_dict',volume_id_to_material_id_dict)
 
 
 #Writing the corresponding volume of all the cells in the mesh
@@ -239,7 +242,7 @@ for volume in all_volumes:
 for tet_id  in tets_in_volumes:
     for tets_in_the_volume , volume in zip(tets_in_each_volume,all_volumes):
         if tet_id in tets_in_the_volume:
-            string_of_text += '\n'+str(volume)
+            string_of_text += '\n'+str(volume_id_to_material_id_dict[volume])
             break
 Attribute.text=string_of_text
 
@@ -289,20 +292,16 @@ string_of_text=''
 for tri_id  in triangles_in_tets:
   Found=False
   for i in range(len(tri_in_external_surface)):
-    if tri_id in tri_in_external_surface(i):
+    if tri_id in tri_in_external_surface[i]:
       Found=True
   if Found==True:
-    string_of_text+=str(all_external_surfaces(i))+'\n'
+    string_of_text+=str(all_external_surfaces[i])+'\n'
   else:
     string_of_text+='0 \n'
 DataItem.text=string_of_text
       
-
-
-  
-
 indent(data)
 # create a new XML file with the results
-mydata = ET.tostring(data)  
-myfile = open("meshtest.xdmf", "w")  
+mydata = ET.tostring(data)
+myfile = open(json_data['field_file'], "w")
 myfile.write(mydata)

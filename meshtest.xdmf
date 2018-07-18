@@ -1,0 +1,20 @@
+<Domain>
+  <Grid GridType="Uniform" Name="mesh">
+    <Topology NodesPerElement="4" NumberOfElements="0" TopologyType="Tetrahedron">
+      <DataItem Dimensions="0 4" Format="XML" NumberType="UInt" />
+    </Topology>
+    <Geometry GeometryType="XYZ">
+      <DataItem Dimensions="0 3" Format="XML" />
+    </Geometry>
+    <Attribute Name="VolumeMarker" />
+  </Grid>
+  <Grid GridType="Uniform" Name="mesh">
+    <Topology NodesPerElement="3" NumberOfElements="0" TopologyType="Triangle">
+      <DataItem Dimensions="0 3" Format="XML" NumberType="UInt" />
+    </Topology>
+    <Geometry />
+    <Attribute AttributeType="scalar" Center="Cell" Name="surface_marker">
+      <DataItem Dimensions="0 1" />
+    </Attribute>
+  </Grid>
+</Domain>
