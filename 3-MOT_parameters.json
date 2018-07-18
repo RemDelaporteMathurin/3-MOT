@@ -39,11 +39,45 @@
                                ],
 
     "Physics": {
+      "Solve_with_decay":1,
+      "Solve_Tritium_Diffusion":1,
+      "Solve_Heat_Transfer":1,
+      "Diffusion_coeff_temperature_dependent":1,
+      "Calculate_off_gassing":1,
+
+
+
       "Heat_Transfers":{
         "Boundary_conditions":{
-          "neumann_surfaces":[4,1,7], // here the structure should be [ (surfacea_number,valuea of gradu ),(surfaceb_number,valueb of gradu ) ]
-          "DC_surfaces":[], // here the structure should be [ (surface1_number,value1 of u ),(surface2_number,value2 of u ) ]
-          "Robin_surfaces":[], // here the structure should be [ (surfacealpha_number,f1(u) ),(surfacebeta_number,f2(u) ) ] Careful : fi must be understood by Fenics. 
+          "neumann":[
+            {
+              "surface":4,
+              "value":0
+            },
+            {
+              "surface":1,
+              "value":0
+            },
+            {
+              "surface":7,
+              "value":0
+            }
+              ], // here the structure should be [ (surfacea_number,valuea of gradu ),(surfaceb_number,valueb of gradu ) ]
+          "DC":[
+            {
+              "surface":2,
+              "value":0
+            },
+            {
+              "surface":3,
+              "value":0
+            },
+            {
+              "surface":8,
+              "value":0
+            }
+          ],
+          "Robin":[[1,"3500",20]], // here the structure should be [ (surfacealpha_number,f1(u) ),(surfacebeta_number,f2(u) ) ] Careful : fi must be understood by Fenics. 
         },
         "Initial_value":0, //todo differenciate the initial value for each volume
         "Source_term":[],  //todo differenciate the source term for each volume
