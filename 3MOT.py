@@ -7,6 +7,7 @@ import os
 import argparse
 import json
 import ast
+from pprint import pprint
 
 #os.system('dolfin-convert geo/mesh.inp geo/coucou.xml')
 
@@ -30,7 +31,16 @@ args = parser.parse_args()
 
 
 
-
+def byteify(input):
+    if isinstance(input, dict):
+        return {byteify(key): byteify(value)
+                for key, value in input.iteritems()}
+    elif isinstance(input, list):
+        return [byteify(element) for element in input]
+    elif isinstance(input, unicode):
+        return input.encode('utf-8')
+    else:
+        return input
 
 
 
@@ -41,8 +51,8 @@ xdmf_encoding = XDMFFile.Encoding.ASCII
 
 
 materialDB='3-MOT_materials.json'
-_3-MOT_parameters='3-MOT_parameters.json'
-with open(_3-MOT_parameters) as f:
+MOT_parameters='MOT_parameters_RCB.json'
+with open(MOT_parameters) as f:
     data = json.load(f)
 
 print('Getting the solvers')
@@ -52,15 +62,18 @@ solve_diffusion_coefficient_temperature_dependent=True
 solve_with_decay=False
 calculate_off_gassing=False
 
+data=byteify(data)
+pprint(data)
+
 print('Defining the solving parameters')
-Time =data['Solving_parameters']['final_time']#60000*365.25*24*3600.0# final time 
-num_steps = data['Solving_parameters']['number_of_time_steps'] # number of time steps
+Time = data["solving_parameters"]['final_time']  #60000*365.25*24*3600.0# final time 
+num_steps = data['solving_parameters']['number_of_time_steps'] # number of time steps
 dt = Time / num_steps # time step size
 t=0 #Initialising time to 0s
 
 # prepare output file for writing by writing the mesh to the file
 xdmf_out = XDMFFile(MPI.comm_world, mesh_file.split('.')[1]+'_from_fenics.xdmf')
-#xdmf_out.write(mesh, xdmf_encoding)
+xdmf_out.write(mesh, xdmf_encoding)
 
 
 cells=2 
@@ -111,8 +124,8 @@ if solve_diffusion==True:
   bcs_c=list()
   for BC in data['physics']['tritium_diffusion']['boundary_conditions']['dc']:
     value_BC=BC['value'] #todo make this value able to be an Expression (time or space dependent)
-    #subdomain=  ALL THE FACETS WHERE surface_marker = BC['surface']
-    #bci_c=DirichletBC(V,value_BC,subdomain)
+
+    #bci_c=DirichletBC(V,value_BC,surface_marker,BC['surface'])
     #bcs_c.append(bci_c)
 
 
@@ -137,12 +150,12 @@ if solve_diffusion==True:
 
 if solve_temperature==True:
   #DC
-  bcs_c=list()
+  bcs_T=list()
   for BC in data['physics']['heat_Transfers']['boundary_conditions']['dc']:
     value_BC=BC['value'] #todo make this value able to be an Expression (time or space dependent)
-    subdomain=ALL THE FACETS WHERE surface_marker = BC['surface']
-    bci_c=DirichletBC(V,value_BC,subdomain)
-    bcs_c.append(bci_c)
+    
+    bci_T=DirichletBC(V,value_BC,surface_marker,BC['surface'])
+    bcs_T.append(bci_T)
 
 
   #Neumann
@@ -222,10 +235,14 @@ if solve_temperature==True:
   q = Expression(str(data['physics']['heat_Transfers']['Initial_value']),t=0,degree=2) #q is the volumetric heat source term
   
   FT = ((T-T_n)/dt)*vT*dx + thermal_diffusivity*dot(grad(T), grad(vT))*dx + q*vT*dx #This is the heat transfer equation
+
   for Neumann in Neumann_BC_T_diffusion:
     FT += thermal_diffusivity * Neumann * vT
+
   for Robin in Robin_BC_T_diffusion:
     FT += thermal_diffusivity * Robin(1) * (T_n-Robin(2))*Robin(0)
+
+
   aT, LT = lhs(FT), rhs(FT) #Rearranging the equation
 
 
@@ -234,7 +251,7 @@ if solve_temperature==True:
 T = Function(V)
 c=Function(V)
 off_gassing=list()
-output_file = data['field_file']
+output_file = 'T.pvd'
 
 if calculate_off_gassing==True:
   file_off_gassing = "Solutions/Off-gassing/off_gassing.csv"

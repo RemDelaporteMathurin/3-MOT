@@ -301,7 +301,7 @@ for tri_id  in triangles_in_tets:
     string_of_text+=str(all_external_surfaces[i])+'\n'
   else:
     string_of_text+='0 \n'
-DataItem.text=string_of_text
+DataItem.text='PROUT'
       
 indent(data)
 # create a new XML file with the results

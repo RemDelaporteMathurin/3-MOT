@@ -60,12 +60,14 @@
 
         "initial_value": 0,
         "source_term": 1
-      },
+      }
     
 
-    "solving_parameters":{
-      "final_time":1000, 
-      "number_of_time_steps":10 
-    }
+    
+  },
+  "solving_parameters":{
+    "final_time":1000, 
+    "number_of_time_steps":10 
   }
+
 }
