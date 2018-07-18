@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+
 import json
 from pprint import pprint
 
@@ -156,6 +157,11 @@ nodes_in_tests_list=[]
 for tet_id in tets_in_volumes:
     nodes_in_tets = cubit.parse_cubit_list("node"," in tet "+str(tet_id))
     nodes_in_tests_list.append(nodes_in_tets)
+
+
+
+
+
 
 
 

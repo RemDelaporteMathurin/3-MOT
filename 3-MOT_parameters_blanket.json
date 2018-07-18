@@ -15,7 +15,7 @@
 
                                 {"step_file":"geometry_files/breeder_blanket/slice_back_plate_1_mod1.step",
                                  "material":"eurofer",
-                                 "material_id":3,
+                                 "material_id":3},
 
                                 {"step_file":"geometry_files/breeder_blanket/slice_back_plate_2_mod1.step",
                                  "material":"eurofer",

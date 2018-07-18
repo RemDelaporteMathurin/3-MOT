@@ -111,9 +111,9 @@ if solve_diffusion==True:
   bcs_c=list()
   for BC in data['physics']['tritium_diffusion']['boundary_conditions']['dc']:
     value_BC=BC['value'] #todo make this value able to be an Expression (time or space dependent)
-    subdomain=  ALL THE FACETS WHERE surface_marker = BC['surface']
-    bci_c=DirichletBC(V,value_BC,subdomain)
-    bcs_c.append(bci_c)
+    #subdomain=  ALL THE FACETS WHERE surface_marker = BC['surface']
+    #bci_c=DirichletBC(V,value_BC,subdomain)
+    #bcs_c.append(bci_c)
 
 
   #Neumann
