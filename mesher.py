@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
 
+from trelis_mesh_functions import *
 
 def find_number_of_volumes_in_each_step_file(input_locations):
     body_ids=''
@@ -45,9 +46,21 @@ def find_shared_surfaces_between_coolant_and_structure(volumes_in_coolant_step_f
           cubit.cmd('highlight surface '+str(surface))  
   return list_of_merged_surfaces
 
-def find_external_surfaces(volumes):
+def find_external_surfaces():
+  print('looking for merged surfaces')
+  surfaces_in_all_volumes = cubit.parse_cubit_list("surface"," in volume all ")  
+  list_of_merged_surfaces = []
+  list_of_unmerged_surfaces= []
+  for surface in surfaces_in_all_volumes:
+      is_merged = cubit.is_merged("surface", surface)
+      if is_merged == True:
+        list_of_merged_surfaces.append(surface)
+      elif is_merged == False:
+        cubit.cmd('color surface '+str(surface)+ ' red')
+        list_of_unmerged_surfaces.append(surface)
+  print('list_of_external_surfaces',list_of_external_surfaces)
+  return list_of_unmerged_surfaces
 
-    return 1
 
 def byteify(input):
     if isinstance(input, dict):

@@ -1,7 +1,9 @@
 {
     "quality" : "10",
 
-    "outputfile" : "mesh_and_markers.xdmf",
+    "mesh_file" : "mesh_and_markers.xdmf",
+
+    "field_file" : "output_mesh_file.xdmf",
 
     "structure_and_materials": [{"step_file":"geometry_files/breeder_blanket/slice_armour_mod1.step",
                                  "material":"tungsten",
@@ -43,8 +45,8 @@
           "DC_surfaces":[], // here the structure should be [ (surface1_number,value1 of u ),(surface2_number,value2 of u ) ]
           "Robin_surfaces":[], // here the structure should be [ (surfacealpha_number,f1(u) ),(surfacebeta_number,f2(u) ) ] Careful : fi must be understood by Fenics. 
         },
-        "Initial_value":0, //todo differenciate the initial value for every volume
-        "Source_term":[],
+        "Initial_value":0, //todo differenciate the initial value for each volume
+        "Source_term":[],  //todo differenciate the source term for each volume
       },
       "Tritium_Diffusion":{
         "Boundary_conditions":{
@@ -52,14 +54,14 @@
           "DC_surfaces":[], // here the structure should be [ (surface1_number,value1 of u ),(surface2_number,value2 of u ) ]
           "Robin_surfaces":[], // here the structure should be [ (surfacealpha_number,f1(u) ),(surfacebeta_number,f2(u) ) ] Careful : fi must be understood by Fenics. 
         },
-        "Initial_value":0, //todo differenciate the initial value for every volume
-        "Source_term":[],
+        "Initial_value":0, //todo differenciate the initial value for each volume
+        "Source_term":[], //todo differenciate the source term for each volume
       }
     },
 
     "Solving_parameters":{
       "Final_Time":10, //Final time in s
-      "Number_of_time_steps":10
+      "Number_of_time_steps":10 //Number of time step
     },
 
     
