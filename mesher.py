@@ -137,9 +137,6 @@ for structure_step_file,volumes_in_structure_step_file in zip(json_data['structu
   f1.write(structure_step_file +' ' + ' '.join(str(i) for i in volumes_in_structure_step_file) +'\n')
 f1.close()
 
-volumes_in_coolant_step_file = find_number_of_volumes_in_each_step_file(json_data['coolant_step_files'])
-print('volumes_in_each_step_file',volumes_in_coolant_step_file)
-
 cubit.cmd('imprint body all')
 cubit.cmd('merge tolerance 1.e-6')
 cubit.cmd('merge all')
