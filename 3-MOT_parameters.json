@@ -52,17 +52,17 @@
           "neumann":[
             {
               "surface":4,
-              "value":0
+              "value":0.5e6
             },
             {
               "surface":1,
-              "value":0
+              "value":0.5e6
             },
             {
               "surface":7,
-              "value":0
+              "value":0.5e6
             }
-              ], // here the structure should be [ (surfacea_number,valuea of gradu ),(surfaceb_number,valueb of gradu ) ]
+              ],
           "DC":[
             {
               "surface":2,
@@ -77,19 +77,68 @@
               "value":0
             }
           ],
-          "Robin":[[1,"3500",20]], // here the structure should be [ (surfacealpha_number,f1(u) ),(surfacebeta_number,f2(u) ) ] Careful : fi must be understood by Fenics. 
+          "Robin":[
+            {
+              "surface":5,
+              "h_coeff":3500,
+              "t_amb":500
+            },
+            {
+              "surface":6,
+              "h_coeff":3500,
+              "t_amb":500
+            },
+          ],
         },
         "Initial_value":0, //todo differenciate the initial value for each volume
-        "Source_term":[],  //todo differenciate the source term for each volume
+        "Source_term":0,  //todo differenciate the source term for each volume
       },
+
+
+
       "Tritium_Diffusion":{
         "Boundary_conditions":{
-          "neumann_surfaces":[4,1,7], // here the structure should be [ (surfacea_number,valuea of gradu ),(surfaceb_number,valueb of gradu ) ]
-          "DC_surfaces":[], // here the structure should be [ (surface1_number,value1 of u ),(surface2_number,value2 of u ) ]
-          "Robin_surfaces":[], // here the structure should be [ (surfacealpha_number,f1(u) ),(surfacebeta_number,f2(u) ) ] Careful : fi must be understood by Fenics. 
+          "neumann":[
+            {
+              "surface":4,
+              "value":0.5e6
+            },
+            {
+              "surface":1,
+              "value":0.5e6
+            },
+            {
+              "surface":7,
+              "value":0.5e6
+            }
+              ],
+          "DC":[
+            {
+              "surface":2,
+              "value":0
+            },
+            {
+              "surface":3,
+              "value":0
+            },
+            {
+              "surface":8,
+              "value":0
+            }
+          ],
+          "Robin":[
+            {
+              "surface":5,
+              "expression":"x[0]+2*x[1]+t"
+            },
+            {
+              "surface":6,
+              
+            },
+          ],
         },
         "Initial_value":0, //todo differenciate the initial value for each volume
-        "Source_term":[], //todo differenciate the source term for each volume
+        "Source_term":0, //todo differenciate the source term for each volume
       }
     },
 
