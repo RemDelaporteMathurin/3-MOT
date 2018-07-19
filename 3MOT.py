@@ -20,14 +20,14 @@ from pprint import pprint
 
 #steel_thickness = float(args.thickness)
 
-parser = argparse.ArgumentParser()
+#parser = argparse.ArgumentParser()
 
 # parser.add_argument("-m","--mesh", help="XDMF Mesh file input ", required=False, default='mesh_and_markers.xdmf')
 # parser.add_argument("-om","--output_mesh", help="XDMF Mesh file output ", required=False, default='mesh_and_markers_from_fenics.xdmf')
 # parser.add_argument("-ot","--output_temperature", help="XDMF Mesh file output with temperature", required=False, default='temperature_output.xdmf')
-parser.add_argument("-j","--json_input", help="XDMF Mesh file output with temperature", required=True)
+#parser.add_argument("-j","--json_input", help="XDMF Mesh file output with temperature", required=True)
 
-args = parser.parse_args()
+#args = parser.parse_args()
 
 
 
@@ -72,8 +72,14 @@ dt = Time / num_steps # time step size
 t=0 #Initialising time to 0s
 
 # prepare output file for writing by writing the mesh to the file
+<<<<<<< HEAD
 xdmf_out = XDMFFile(MPI.comm_world, data['mesh_file'].split('.')[1]+'_from_fenics.xdmf')
 #xdmf_out.write(mesh, xdmf_encoding)
+=======
+
+xdmf_out = XDMFFile(MPI.comm_world, data['mesh_file'].split('.')[1]+'_from_fenics.xdmf')
+xdmf_out.write(mesh, xdmf_encoding)
+>>>>>>> 048ef430e0e8f24a3cdd91de2773d4fd70c7dbce
 
 
 cells=2 
@@ -232,7 +238,7 @@ if solve_diffusion==True:
 if solve_temperature==True:
   T = TrialFunction(V) #T is the temperature
   vT = TestFunction(V)
-  q = Expression(str(data['physics']['heat_Transfers']['Initial_value']),t=0,degree=2) #q is the volumetric heat source term
+  q = Expression(str(data['physics']['heat_transfers']['source_term']),t=0,degree=2) #q is the volumetric heat source term
   
   FT = ((T-T_n)/dt)*vT*dx + thermal_diffusivity*dot(grad(T), grad(vT))*dx + q*vT*dx #This is the heat transfer equation
 
