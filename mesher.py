@@ -279,7 +279,7 @@ DataItem.text=string_of_text
 
 ##Writing the surfaces of all triangles in the mesh (0 if not on an external surface)
 Geometry=ET.SubElement(Grid,'Geometry')
-Attribute=ET.SubElement(Grid,'Attribute')
+Attribute=ET.SubElement(Geometry,'Attribute')
 Attribute.set('Name','surface_marker')
 Attribute.set('AttributeType','scalar')
 Attribute.set('Center','Cell')
@@ -289,22 +289,35 @@ DataItem.set('Dimensions',str(len(triangles_in_tets))+' 1')
 string_of_text=''
 tri_in_external_surface = []
 all_external_surfaces=find_external_surfaces()
+
+
+
+print(all_external_surfaces)
 for surface in all_external_surfaces:
   tri_in_external_surface.append(cubit.parse_cubit_list("tri"," in surface "+' '+str(surface)))
 string_of_text=''
+
+
+
 for tri_id  in triangles_in_tets:
   Found=False
   for i in range(len(tri_in_external_surface)):
     if tri_id in tri_in_external_surface[i]:
-      Found=True
-  if Found==True:
-    string_of_text+=str(all_external_surfaces[i])+'\n'
-  else:
+      Found==True
+      string_of_text+=str(all_external_surfaces[i])+'\n'
+      break
+  if Found == False:
     string_of_text+='0 \n'
-DataItem.text='PROUT'
+DataItem.text=string_of_text
       
 indent(data)
 # create a new XML file with the results
 mydata = ET.tostring(data)
-myfile = open(json_data['field_file'], "w")
+myfile = open(json_data['mesh_file'], "w")
 myfile.write(mydata)
+
+
+myfile.close()
+
+
+print('This is the end')
