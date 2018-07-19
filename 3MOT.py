@@ -1,4 +1,4 @@
-from fenics import *
+#from fenics import *
 from dolfin import *
 import numpy as np
 import csv
@@ -62,7 +62,7 @@ solve_diffusion_coefficient_temperature_dependent=True
 solve_with_decay=False
 calculate_off_gassing=False
 
-data=byteify(data)
+#data=byteify(data)
 pprint(data)
 
 print('Defining the solving parameters')
@@ -72,8 +72,8 @@ dt = Time / num_steps # time step size
 t=0 #Initialising time to 0s
 
 # prepare output file for writing by writing the mesh to the file
-xdmf_out = XDMFFile(MPI.comm_world, mesh_file.split('.')[1]+'_from_fenics.xdmf')
-xdmf_out.write(mesh, xdmf_encoding)
+xdmf_out = XDMFFile(MPI.comm_world, data['mesh_file'].split('.')[1]+'_from_fenics.xdmf')
+#xdmf_out.write(mesh, xdmf_encoding)
 
 
 cells=2 

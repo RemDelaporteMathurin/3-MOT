@@ -3,7 +3,7 @@
 
     "mesh_file" : "mesh_and_markers.xdmf",
 
-    "field_file" : "output_mesh_file.xdmf",
+    "field_file" : "field.xdmf",
 
     "structure_and_materials": [
       {

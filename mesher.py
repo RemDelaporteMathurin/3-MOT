@@ -3,6 +3,8 @@ import xml.etree.ElementTree as ET
 import json
 from pprint import pprint
 
+# 
+
 def find_number_of_volumes_in_each_step_file(input_locations):
     body_ids=''
     volumes_in_each_step_file=[]
@@ -306,5 +308,5 @@ DataItem.text='PROUT'
 indent(data)
 # create a new XML file with the results
 mydata = ET.tostring(data)
-myfile = open(json_data['field_file'], "w")
+myfile = open(json_data['mesh_file'], "w")
 myfile.write(mydata)
