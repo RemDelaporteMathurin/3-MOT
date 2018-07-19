@@ -7,17 +7,17 @@
 
     "structure_and_materials": [
       {
-        "step_file":"geo/rcb/volume1.stp",
-        "material":"steel",
+        "step_file":"geo/rcb/concrete.stp",
+        "material":"concrete",
         "material_id":2
       },
       {
-        "step_file":"geo/rcb/volume2.stp",
+        "step_file":"geo/rcb/polymer.stp",
         "material":"polymer",
         "material_id":1
       },
       {
-        "step_file":"geo/rcb/volume3.stp",
+        "step_file":"geo/rcb/steel.stp",
         "material":"steel",
         "material_id":0
       }
