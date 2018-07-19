@@ -20,7 +20,7 @@
 
 
 aprepro_vars = cubit.get_aprepro_vars()
-steel_thickness = float(cubit.get_aprepro_value_as_string("thickness"))
+steel_thickness = 2e-3
 
 
 concrete_thickness=240e-3
