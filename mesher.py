@@ -313,8 +313,12 @@ DataItem.text=string_of_text
       
 indent(data)
 # create a new XML file with the results
+
+xml_header = '<?xml version="1.0"?><!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>\n'
+xml_header += '<Xdmf Version="3.0" xmlns:xi="http://www.w3.org/2001/XInclude">'
 mydata = ET.tostring(data)
 myfile = open(json_data['mesh_file'], "w")
+myfile.write(xml_header)
 myfile.write(mydata)
 
 

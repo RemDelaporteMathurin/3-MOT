@@ -71,10 +71,6 @@ num_steps = data['solving_parameters']['number_of_time_steps'] # number of time 
 dt = Time / num_steps # time step size
 t=0 #Initialising time to 0s
 
-# prepare output file for writing by writing the mesh to the file
-
-xdmf_out = XDMFFile(MPI.comm_world, data['mesh_file'].split('.')[1]+'_from_fenics.xdmf')
-xdmf_out.write(mesh, xdmf_encoding)
 
 
 cells=2 
@@ -82,10 +78,17 @@ cells=2
 print('Defining mesh')
 #Create mesh and define function space
 
+print("data['mesh_file']",data['mesh_file'])
+
 # Read in Mesh and markers from file
 mesh = Mesh()
 xdmf_in = XDMFFile(MPI.comm_world, data['mesh_file'])
 xdmf_in.read(mesh)
+
+
+# prepare output file for writing by writing the mesh to the file
+xdmf_out = XDMFFile(MPI.comm_world, data['mesh_file'].split('.')[1]+'_from_fenics.xdmf')
+xdmf_out.write(mesh, xdmf_encoding)
 
 subdomains = MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
 print('Number of cell is '+ str(len(subdomains.array())))
