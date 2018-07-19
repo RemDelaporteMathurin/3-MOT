@@ -5,6 +5,7 @@ from pprint import pprint
 from datetime import datetime
 
 # run with trelis mesher.py "json_input='MOT_parameters_RCB.json'"
+# run with trelis -batch -nographics mesher.py "json_input='MOT_parameters_RCB.json'"
 
 startTime = datetime.now()
 
@@ -243,15 +244,14 @@ Attribute=ET.SubElement(Grid,'Attribute')
 Attribute.set('Name','VolumeMarker')
 all_volumes = cubit.parse_cubit_list("volume", ' all')
 all_surfaces = cubit.parse_cubit_list("surface", ' all')
+
+
 string_of_text=''
-tets_in_each_volume = []
-for volume in all_volumes:
-  tets_in_each_volume.append(cubit.get_volume_tets(volume))
-for tet_id  in tets_in_volumes:
-    for tets_in_the_volume , volume in zip(tets_in_each_volume,all_volumes):
-        if tet_id in tets_in_the_volume:
-            string_of_text += '\n'+str(volume_id_to_material_id_dict[volume])
-            break
+for tet_id in tets_in_volumes:
+  volume_id = cubit.parse_cubit_list("volume", "in tet "+str(tet_id))[0]
+  string_of_text += '\n'+str(volume_id_to_material_id_dict[volume_id])
+
+
 Attribute.text=string_of_text
 
 
@@ -303,16 +303,12 @@ for surface in all_external_surfaces:
 string_of_text=''
 
 
+string_of_text = ''
+for tri_id in triangles_in_tets:
+     # print(tri_id)
+     surface_id = cubit.parse_cubit_list("surface", " in tri "+str(tri_id))[0]
+     string_of_text = string_of_text+' ' + str(surface_id) + '\n'
 
-for tri_id  in triangles_in_tets:
-  Found=False
-  for i in range(len(tri_in_external_surface)):
-    if tri_id in tri_in_external_surface[i]:
-      Found==True
-      string_of_text+=str(all_external_surfaces[i])+'\n'
-      break
-  if Found == False:
-    string_of_text+='0 \n'
 DataItem.text=string_of_text
       
 indent(data)

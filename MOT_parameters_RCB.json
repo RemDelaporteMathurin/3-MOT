@@ -1,5 +1,5 @@
 {
-    "quality" : "7",
+    "quality" : "5",
 
     "mesh_file" : "mesh_and_markers.xdmf",
 
@@ -7,17 +7,17 @@
 
     "structure_and_materials": [
       {
-        "step_file":"geo/rcb/concrete.stp",
+        "step_file":"geometry_files/rcb/concrete.stp",
         "material":"concrete",
         "material_id":2
       },
       {
-        "step_file":"geo/rcb/polymer.stp",
+        "step_file":"geometry_files/rcb/polymer.stp",
         "material":"polymer",
         "material_id":1
       },
       {
-        "step_file":"geo/rcb/steel.stp",
+        "step_file":"geometry_files/rcb/steel.stp",
         "material":"steel",
         "material_id":0
       }
