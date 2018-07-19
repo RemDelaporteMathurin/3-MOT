@@ -72,14 +72,9 @@ dt = Time / num_steps # time step size
 t=0 #Initialising time to 0s
 
 # prepare output file for writing by writing the mesh to the file
-<<<<<<< HEAD
-xdmf_out = XDMFFile(MPI.comm_world, data['mesh_file'].split('.')[1]+'_from_fenics.xdmf')
-#xdmf_out.write(mesh, xdmf_encoding)
-=======
 
 xdmf_out = XDMFFile(MPI.comm_world, data['mesh_file'].split('.')[1]+'_from_fenics.xdmf')
 xdmf_out.write(mesh, xdmf_encoding)
->>>>>>> 048ef430e0e8f24a3cdd91de2773d4fd70c7dbce
 
 
 cells=2 
