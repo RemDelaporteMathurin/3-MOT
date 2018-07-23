@@ -56,14 +56,13 @@ with open(MOT_parameters) as f:
     data = json.load(f)
 
 print('Getting the solvers')
-solve_temperature=False
-solve_diffusion=True
+solve_temperature=True
+solve_diffusion=False
 solve_diffusion_coefficient_temperature_dependent=True
 solve_with_decay=False
 calculate_off_gassing=False
 
 data=byteify(data)
-pprint(data)
 
 print('Defining the solving parameters')
 Time = data["solving_parameters"]['final_time']  #60000*365.25*24*3600.0# final time 
@@ -78,7 +77,6 @@ cells=2
 print('Defining mesh')
 #Create mesh and define function space
 
-print("data['mesh_file']",data['mesh_file'])
 
 # Read in Mesh and markers from file
 mesh = Mesh()
@@ -89,7 +87,7 @@ xdmf_in.read(mesh)
 # prepare output file for writing by writing the mesh to the file
 xdmf_out = XDMFFile(str(data['mesh_file']).split('.')[1]+'_from_fenics.xdmf')
 
-subdomains = MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
+subdomains = MeshFunction("size_t", mesh, mesh.topology().dim())
 print('Number of cell is '+ str(len(subdomains.array())))
 
 
@@ -142,7 +140,7 @@ if solve_diffusion==True:
   Neumann_BC_c_diffusion=[]
   for Neumann in data['physics']['tritium_diffusion']['boundary_conditions']['neumann']:
     value=Neumann['value']
-    Neumann_BC_c_diffusion.append(value*ds(Neumann['surface']))
+    Neumann_BC_c_diffusion.append([Neumann['value'],Neumann['surface']])
 
 
   #Robins
@@ -155,7 +153,7 @@ if solve_diffusion==True:
       for surface in Robin['surface']:
         Robin_BC_c_diffusion.append(value*ds(surface))
     else:
-      Robin_BC_c_diffusion.append(value*ds(Robin))
+      Robin_BC_c_diffusion.append(value*ds(Robin['surface']))
 
 
 
@@ -165,24 +163,35 @@ if solve_diffusion==True:
 if solve_temperature==True:
   #DC
   bcs_T=list()
-  for BC in data['physics']['heat_transfers']['boundary_conditions']['dc']:
-    value_BC=BC['value'] #todo make this value able to be an Expression (time or space dependent)
+  for DC in data['physics']['heat_transfers']['boundary_conditions']['dc']:
+    value_DC=DC['value'] #todo make this value able to be an Expression (time or space dependent)
     
-    bci_T=DirichletBC(V,value_BC,surface_marker,BC['surface'])
-    bcs_T.append(bci_T)
+    if type(DC['surface'])==list:
+      for surface in DC['surface']:
+        print(surface_marker)
+        bci_T=DirichletBC(V,value_DC,surface_marker,surface)
+        bcs_T.append(bci_T)
+    else:
+      bci_T=DirichletBC(V,value_DC,surface_marker,DC['surface'])
+      bcs_T.append(bci_T)
+      
 
 
   #Neumann
   Neumann_BC_T_diffusion=[]
   for Neumann in data['physics']['heat_transfers']['boundary_conditions']['neumann']:
-    value=Neumann['value']
-    Neumann_BC_T_diffusion.append(value*ds(Neumann['surface']))
+    Neumann_BC_T_diffusion.append([Neumann['value'],Neumann['surface']])
 
 
   #Robins
   Robin_BC_T_diffusion=[]
   for Robin in data['physics']['heat_transfers']['boundary_conditions']['robin']:
-    Robin_BC_T_diffusion.append([ds(Robin['surface']),Robin['hc_coeff'],Robin['t_amb']])
+    
+    if type(Robin['surface'])==list:
+      for surface in Robin['surface']:
+        Robin_BC_T_diffusion.append([ds(surface),Robin['hc_coeff'],Robin['t_amb']])
+    else:
+      Robin_BC_T_diffusion.append([ds(Robin['surface']),Robin['hc_coeff'],Robin['t_amb']])
 
 
 #read in the volume markers
@@ -214,19 +223,19 @@ if solve_with_decay==True:
 else:
   decay=0
 
-thermal_diffusivity=Function(V0)
-thermal_diffusivity_values=[0,4e-6,0.15e-6,0.54e-6]
+thermal_conductivity=Function(V0)
+thermal_conductivity_values=[130.0,130.0,130.0,130.0]
 
 
 ##Assigning each to each cell its properties
 for cell_no in range(len(volume_marker.array())):
   material_id=volume_marker.array()[cell_no]
   #print(str(material_id))
-  thermal_diffusivity.vector()[cell_no]=thermal_diffusivity_values[material_id]
+  thermal_conductivity.vector()[cell_no]=thermal_conductivity_values[material_id]
 
   D.vector()[cell_no]=calculate_D(data['physics']['heat_transfers']['initial_value'],material_id)
   #print(D.vector()[cell_no])
-  
+
 
 ### Define variational problem
 print('Defining the variational problem')
@@ -236,7 +245,7 @@ if solve_diffusion==True:
   c = TrialFunction(V)#c is the tritium concentration
   vc = TestFunction(V)
   f = Expression(str(data['physics']['tritium_diffusion']['source_term']),t=0,degree=2)#This is the tritium volumetric source term 
-  F=((c-c_n)/dt)*vc*dx + D*dot(grad(c), grad(vc))*dx + (-f+decay*c)*vc*dx 
+  F=((c-c_n)/dt)*vc*dx + D*dot(grad(c), grad(vc))*dx + (-S+decay*c)*vc*dx 
   for Neumann in Neumann_BC_c_diffusion:
     F += D*Neumann*vc
   for Robin in Robin_BC_c_diffusion:
@@ -249,17 +258,16 @@ if solve_temperature==True:
   vT = TestFunction(V)
   q = Expression(str(data['physics']['heat_transfers']['source_term']),t=0,degree=2) #q is the volumetric heat source term
   
-  FT = ((T-T_n)/dt)*vT*dx + thermal_diffusivity*dot(grad(T), grad(vT))*dx + q*vT*dx #This is the heat transfer equation
+  FT = 1e6*((T-T_n)/dt)*vT*dx +thermal_conductivity*dot(grad(T), grad(vT))*dx - q*vT*dx #This is the heat transfer equation     
 
   for Neumann in Neumann_BC_T_diffusion:
-    FT += thermal_diffusivity * Neumann * vT
+    FT += -1/thermal_conductivity*  Neumann[0]*vT *ds(Neumann[1])
 
   for Robin in Robin_BC_T_diffusion:
-    FT += thermal_diffusivity *vT* Robin(1) * (T_n-Robin(2))*Robin(0)
+    FT += 1/thermal_conductivity *vT* Robin[1] * (T-Robin[2])*Robin[0]
 
 
   aT, LT = lhs(FT), rhs(FT) #Rearranging the equation
-
 
 
 ### Time-stepping
@@ -279,22 +287,20 @@ for n in range(num_steps):
   print("t= "+str(t/3600/24/365.25)+" years")
   print(str(100*t/Time)+" %")
   t += dt
-  f.t += dt
+  
 
   # Compute solution concentration
   if solve_diffusion==True:
+    f.t += dt
     solve(ac==Lc,c,bcs_c)
     output_file << (c,t)
     c_n.assign(c)
   # Compute solution temperature
   if solve_temperature==True:
+    q.t += dt
     solve(aT == LT, T, bcs_T)
     output_file << (T,t)
     T_n.assign(T)
-
-  # Update previous solution
-  
-  
 
   #Update the materials properties
   if solve_diffusion_coefficient_temperature_dependent==True and solve_temperature==True and solve_diffusion==True:
