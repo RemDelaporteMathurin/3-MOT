@@ -1,7 +1,7 @@
 {
     "quality" : "5",
 
-    "mesh_file" : "mesh_and_markers.xdmf",
+    "mesh_file" : "mesh_and_markersJON.xdmf",
 
     "field_file" : "field.xdmf",
 
@@ -42,7 +42,7 @@
           ]
         },
 
-        "initial_value": "",
+        "initial_value": 300,
         "source_term": "" 
       },
 
@@ -66,7 +66,7 @@
     
   },
   "solving_parameters":{
-    "final_time":1000, 
+    "final_time":1000.0, 
     "number_of_time_steps":10 
   }
 

@@ -4,8 +4,8 @@ import json
 from pprint import pprint
 from datetime import datetime
 
-# run with trelis mesher.py "json_input='MOT_parameters_RCB.json'"
-# run with trelis -batch -nographics mesher.py "json_input='MOT_parameters_RCB.json'"
+# run with trelis mesher.py json_input='MOT_parameters_RCB.json'
+# run with trelis -batch -nographics mesher.py json_input='MOT_parameters_RCB.json'
 
 startTime = datetime.now()
 
@@ -190,9 +190,11 @@ def indent(elem, level=0):
 
 
 # create the file structure
-
-data = ET.Element('Domain')
-Grid = ET.SubElement(data, 'Grid')
+data=ET.Element('Xdmf')
+data.set('Version','3.0')
+data.set('xmlns:xi','http://www.w3.org/2001/XInclude')
+Domain = ET.SubElement(data,'Domain')
+Grid = ET.SubElement(Domain, 'Grid')
 Grid.set('Name','mesh')
 Grid.set('GridType','Uniform')
 
@@ -256,7 +258,7 @@ Attribute.text=string_of_text
 
 
 ##Writing all the nodes of all the triangles in the mesh
-Grid = ET.SubElement(data, 'Grid')
+Grid = ET.SubElement(Domain, 'Grid')
 Grid.set('Name','mesh')
 Grid.set('GridType','Uniform')
 
@@ -283,8 +285,8 @@ DataItem.text=string_of_text
 
 
 ##Writing the surfaces of all triangles in the mesh (0 if not on an external surface)
-Geometry=ET.SubElement(Grid,'Geometry')
-Attribute=ET.SubElement(Geometry,'Attribute')
+Geometry=ET.SubElement(Domain,'Geometry')
+Attribute=ET.SubElement(Domain,'Attribute')
 Attribute.set('Name','surface_marker')
 Attribute.set('AttributeType','scalar')
 Attribute.set('Center','Cell')
@@ -315,7 +317,7 @@ indent(data)
 # create a new XML file with the results
 
 xml_header = '<?xml version="1.0"?><!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>\n'
-xml_header += '<Xdmf Version="3.0" xmlns:xi="http://www.w3.org/2001/XInclude">'
+#xml_header += '<Xdmf Version="3.0" xmlns:xi="http://www.w3.org/2001/XInclude">'
 mydata = ET.tostring(data)
 myfile = open(json_data['mesh_file'], "w")
 myfile.write(xml_header)

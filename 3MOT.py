@@ -1,4 +1,4 @@
-#from fenics import *
+from fenics import *
 from dolfin import *
 import numpy as np
 import csv
@@ -8,9 +8,7 @@ import argparse
 import json
 import ast
 from pprint import pprint
-
 #os.system('dolfin-convert geo/mesh.inp geo/coucou.xml')
-
 
 #parser = argparse.ArgumentParser(description='make a mesh')
 #parser.add_argument("thickness")
@@ -30,7 +28,6 @@ from pprint import pprint
 #args = parser.parse_args()
 
 
-
 def byteify(input):
     if isinstance(input, dict):
         return {byteify(key): byteify(value)
@@ -46,7 +43,10 @@ def byteify(input):
 
 print('Getting the databases')
 
-xdmf_encoding = XDMFFile.Encoding.ASCII
+
+
+#xdmf_encoding = XDMFFile.Encoding.ASCII
+
 #xdmf_encoding = XDMFFile.Encoding.HDF5
 
 
@@ -56,13 +56,13 @@ with open(MOT_parameters) as f:
     data = json.load(f)
 
 print('Getting the solvers')
-solve_temperature=True
+solve_temperature=False
 solve_diffusion=True
 solve_diffusion_coefficient_temperature_dependent=True
 solve_with_decay=False
 calculate_off_gassing=False
 
-#data=byteify(data)
+data=byteify(data)
 pprint(data)
 
 print('Defining the solving parameters')
@@ -82,13 +82,12 @@ print("data['mesh_file']",data['mesh_file'])
 
 # Read in Mesh and markers from file
 mesh = Mesh()
-xdmf_in = XDMFFile(MPI.comm_world, data['mesh_file'])
+xdmf_in = XDMFFile(mesh.mpi_comm(), str(data['mesh_file']))
 xdmf_in.read(mesh)
 
 
 # prepare output file for writing by writing the mesh to the file
-xdmf_out = XDMFFile(MPI.comm_world, data['mesh_file'].split('.')[1]+'_from_fenics.xdmf')
-xdmf_out.write(mesh, xdmf_encoding)
+xdmf_out = XDMFFile(str(data['mesh_file']).split('.')[1]+'_from_fenics.xdmf')
 
 subdomains = MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
 print('Number of cell is '+ str(len(subdomains.array())))
@@ -101,11 +100,17 @@ V0 = FunctionSpace(mesh, 'DG', 0) #FunctionSpace of the materials properties
 ### Define initial values
 print('Defining initial values')
 ##Tritium concentration
-iniC = Expression(str(data['physics']['tritium_diffusion']['initial_value']),degree=1) 
-c_n = interpolate(iniC, V)
+if solve_diffusion==True:
+  #print(str(data['physics']['tritium_diffusion']['initial_value']))
+  iniC = Expression(str(data['physics']['tritium_diffusion']['initial_value']),degree=2) 
+  c_n = interpolate(iniC, V)
+
 ##Temperature
-iniT = Expression(str(data['physics']['heat_Transfers']['initial_value']),degree=1)
-T_n = interpolate(iniT, V)
+
+if solve_temperature==True:
+  #print(str(data['physics']['heat_transfers']['initial_value']))
+  iniT = Expression(str(data['physics']['heat_transfers']['initial_value']),degree=2) 
+  T_n = interpolate(iniT, V)
 
 
 ### Boundary Conditions
@@ -116,7 +121,7 @@ surface_marker_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim() -
 xdmf_in.read(surface_marker_mvc, "surface_marker")
 
 surface_marker_mvc.rename("surface_marker", "surface_marker")
-xdmf_out.write(surface_marker_mvc, xdmf_encoding)
+#xdmf_out.write(surface_marker_mvc, xdmf_encoding)
 
 surface_marker = MeshFunction("size_t", mesh, surface_marker_mvc)
 
@@ -129,8 +134,8 @@ if solve_diffusion==True:
   for BC in data['physics']['tritium_diffusion']['boundary_conditions']['dc']:
     value_BC=BC['value'] #todo make this value able to be an Expression (time or space dependent)
 
-    #bci_c=DirichletBC(V,value_BC,surface_marker,BC['surface'])
-    #bcs_c.append(bci_c)
+    bci_c=DirichletBC(V,value_BC,surface_marker,BC['surface'])
+    bcs_c.append(bci_c)
 
 
   #Neumann
@@ -145,7 +150,12 @@ if solve_diffusion==True:
   for Robin in data['physics']['tritium_diffusion']['boundary_conditions']['robin']:
     value=Function(V)
     value=ast.literal_eval(Robin['expression'])
-    Robin_BC_c_diffusion.append(value*ds(Robin))
+
+    if type(Robin['surface'])==list:
+      for surface in Robin['surface']:
+        Robin_BC_c_diffusion.append(value*ds(surface))
+    else:
+      Robin_BC_c_diffusion.append(value*ds(Robin))
 
 
 
@@ -155,7 +165,7 @@ if solve_diffusion==True:
 if solve_temperature==True:
   #DC
   bcs_T=list()
-  for BC in data['physics']['heat_Transfers']['boundary_conditions']['dc']:
+  for BC in data['physics']['heat_transfers']['boundary_conditions']['dc']:
     value_BC=BC['value'] #todo make this value able to be an Expression (time or space dependent)
     
     bci_T=DirichletBC(V,value_BC,surface_marker,BC['surface'])
@@ -164,14 +174,14 @@ if solve_temperature==True:
 
   #Neumann
   Neumann_BC_T_diffusion=[]
-  for Neumann in data['physics']['heat_Transfers']['boundary_conditions']['neumann']:
+  for Neumann in data['physics']['heat_transfers']['boundary_conditions']['neumann']:
     value=Neumann['value']
     Neumann_BC_T_diffusion.append(value*ds(Neumann['surface']))
 
 
   #Robins
   Robin_BC_T_diffusion=[]
-  for Robin in data['physics']['heat_Transfers']['boundary_conditions']['robin']:
+  for Robin in data['physics']['heat_transfers']['boundary_conditions']['robin']:
     Robin_BC_T_diffusion.append([ds(Robin['surface']),Robin['hc_coeff'],Robin['t_amb']])
 
 
@@ -179,23 +189,24 @@ if solve_temperature==True:
 volume_marker_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim() - 1)
 xdmf_in.read(volume_marker_mvc, "volume_marker_material")
 
-volume_marker_mvc.rename("volume_marker_material", "volume_marker_material")
-xdmf_out.write(volume_marker_mvc, xdmf_encoding)
+#volume_marker_mvc.rename("volume_marker_material", "volume_marker_material")
+#xdmf_out.write(volume_marker_mvc, xdmf_encoding)
 
-volume_marker = MeshFunction("size_t", mesh, surface_marker_mvc)
+volume_marker = MeshFunction("size_t", mesh, volume_marker_mvc)
 
 
 ###Defining materials properties
 print('Defining the materials properties')
 
 D  = Function(V0) #Diffusion coefficient
+
 def calculate_D(T,material_id):
   R=8.314 #Perfect gas constant
-  if material_id==0: #Steel
+  if material_id==1: #Steel
     return 7.3e-7*np.exp(-6.3e3/T)
-  elif material_id==1: #Polymer
+  elif material_id==2: #Polymer
     return 2.0e-7*np.exp(-29000.0/R/T)
-  elif material_id==2: #Concrete
+  elif material_id==3: #Concrete
     return 2e-6
 
 if solve_with_decay==True:
@@ -204,16 +215,16 @@ else:
   decay=0
 
 thermal_diffusivity=Function(V0)
-thermal_diffusivity_values=[4e-6,0.15e-6,0.54e-6]
+thermal_diffusivity_values=[0,4e-6,0.15e-6,0.54e-6]
 
 
 ##Assigning each to each cell its properties
 for cell_no in range(len(volume_marker.array())):
   material_id=volume_marker.array()[cell_no]
-  
-  thermal_diffusivity.vector()[cell_no]=thermal_diffusivity_values[subdomain_no]
+  #print(str(material_id))
+  thermal_diffusivity.vector()[cell_no]=thermal_diffusivity_values[material_id]
 
-  D.vector()[cell_no]=calculate_D(data['physics']['heat_Transfers']['initial_value'],material_id)
+  D.vector()[cell_no]=calculate_D(data['physics']['heat_transfers']['initial_value'],material_id)
   #print(D.vector()[cell_no])
   
 
@@ -225,7 +236,7 @@ if solve_diffusion==True:
   c = TrialFunction(V)#c is the tritium concentration
   vc = TestFunction(V)
   f = Expression(str(data['physics']['tritium_diffusion']['source_term']),t=0,degree=2)#This is the tritium volumetric source term 
-  F=((c-c_n)/dt)*vc*dx + D*dot(grad(c), grad(vc))*dx + (f+decay*c)*vc*dx 
+  F=((c-c_n)/dt)*vc*dx + D*dot(grad(c), grad(vc))*dx + (-f+decay*c)*vc*dx 
   for Neumann in Neumann_BC_c_diffusion:
     F += D*Neumann*vc
   for Robin in Robin_BC_c_diffusion:
@@ -244,7 +255,7 @@ if solve_temperature==True:
     FT += thermal_diffusivity * Neumann * vT
 
   for Robin in Robin_BC_T_diffusion:
-    FT += thermal_diffusivity * Robin(1) * (T_n-Robin(2))*Robin(0)
+    FT += thermal_diffusivity *vT* Robin(1) * (T_n-Robin(2))*Robin(0)
 
 
   aT, LT = lhs(FT), rhs(FT) #Rearranging the equation
@@ -253,9 +264,9 @@ if solve_temperature==True:
 
 ### Time-stepping
 T = Function(V)
-c=Function(V)
+c = Function(V)
 off_gassing=list()
-output_file = 'T.pvd'
+output_file  = File("Solution.pvd")
 
 if calculate_off_gassing==True:
   file_off_gassing = "Solutions/Off-gassing/off_gassing.csv"
@@ -270,19 +281,20 @@ for n in range(num_steps):
   t += dt
   f.t += dt
 
-
   # Compute solution concentration
   if solve_diffusion==True:
     solve(ac==Lc,c,bcs_c)
     output_file << (c,t)
+    c_n.assign(c)
   # Compute solution temperature
   if solve_temperature==True:
     solve(aT == LT, T, bcs_T)
     output_file << (T,t)
+    T_n.assign(T)
 
   # Update previous solution
-  c_n.assign(c)
-  T_n.assign(T)
+  
+  
 
   #Update the materials properties
   if solve_diffusion_coefficient_temperature_dependent==True and solve_temperature==True and solve_diffusion==True:
