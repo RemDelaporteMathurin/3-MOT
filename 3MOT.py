@@ -163,17 +163,22 @@ if solve_diffusion==True:
 if solve_temperature==True:
   #DC
   bcs_T=list()
+  #bci_T=DirichletBC(V,23,surface_marker,22)
+  #bcs_T.append(bci_T)
   for DC in data['physics']['heat_transfers']['boundary_conditions']['dc']:
     value_DC=DC['value'] #todo make this value able to be an Expression (time or space dependent)
     
     if type(DC['surface'])==list:
       for surface in DC['surface']:
-        print(surface_marker)
+        print(surface)
         bci_T=DirichletBC(V,value_DC,surface_marker,surface)
         bcs_T.append(bci_T)
+        print(bci_T)
     else:
+      print(DC)
       bci_T=DirichletBC(V,value_DC,surface_marker,DC['surface'])
       bcs_T.append(bci_T)
+      print(bci_T)
       
 
 
@@ -268,7 +273,6 @@ if solve_temperature==True:
 
 
   aT, LT = lhs(FT), rhs(FT) #Rearranging the equation
-
 
 ### Time-stepping
 T = Function(V)
