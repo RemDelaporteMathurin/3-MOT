@@ -1,7 +1,7 @@
 {
     "quality" : "5",
 
-    "mesh_file" : "mesh_and_markersJON.xdmf",
+    "mesh_file" : "mesh_and_markers_RCB.xdmf",
 
     "field_file" : "field.xdmf",
 
@@ -35,18 +35,6 @@
       "heat_transfers":{
         "boundary_conditions":{
           "neumann":[
-            {
-              "surface":4,
-              "value":0.5e6
-            },
-            {
-              "surface":1,
-              "value":0.5e6
-            },
-            {
-              "surface":7,
-              "value":0.5e6
-            }
               ],
           "dc":[
           ],

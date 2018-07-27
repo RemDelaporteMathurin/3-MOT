@@ -233,11 +233,6 @@ for coords in nodal_coordinates_list:
     string_of_text += str(coords[0])+' '+str(coords[1])+' '+str(coords[2])+'\n'
 DataItem.text=string_of_text
 
-volume_id_to_material_id_dict={}
-for volume_ids, material_id in zip(volumes_in_structure_step_files,json_data['material_ids']):
-  for volume_id in volume_ids:
-    volume_id_to_material_id_dict[int(volume_id)]=material_id
-
 print('volume_id_to_material_id_dict',volume_id_to_material_id_dict)
 
 
@@ -251,7 +246,7 @@ all_surfaces = cubit.parse_cubit_list("surface", ' all')
 string_of_text=''
 for tet_id in tets_in_volumes:
   volume_id = cubit.parse_cubit_list("volume", "in tet "+str(tet_id))[0]
-  string_of_text += '\n'+str(volume_id_to_material_id_dict[volume_id])
+  string_of_text += '\n'+str(volume_id)
 
 
 Attribute.text=string_of_text
