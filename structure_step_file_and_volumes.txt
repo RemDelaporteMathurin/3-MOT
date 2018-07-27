@@ -1,3 +1,0 @@
-geometry_files/rcb/concrete.stp 1
-geometry_files/rcb/polymer.stp 2
-geometry_files/rcb/steel.stp 3
