@@ -70,13 +70,13 @@ print('Getting the databases')
 
 
 materialDB='3-MOT_materials.json'
-MOT_parameters='MOT_parameters_RCB.json'
+MOT_parameters='MOT_parameters_breeder_blankets.json'
 with open(MOT_parameters) as f:
     data = json.load(f)
 
 print('Getting the solvers')
-solve_temperature=False
-solve_diffusion=True
+solve_temperature=True
+solve_diffusion=False
 solve_diffusion_coefficient_temperature_dependent=True
 solve_with_decay=True
 calculate_off_gassing=False
@@ -84,7 +84,7 @@ calculate_off_gassing=False
 data=byteify(data)
 
 print('Defining the solving parameters')
-Time = data["solving_parameters"]['final_time']  #60000*365.25*24*3600.0# final time 
+Time = float(data["solving_parameters"]['final_time'])  #60000*365.25*24*3600.0# final time 
 num_steps = data['solving_parameters']['number_of_time_steps'] # number of time steps
 dt = Time / num_steps # time step size
 t=0 #Initialising time to 0s
@@ -155,7 +155,7 @@ if solve_diffusion==True:
         bcs_c.append(bci_c)
         #print(bci_T)
     else:
-      print(DC)
+      #print(DC)
       bci_c=DirichletBC(V,value_DC,surface_marker,DC['surface'])
       bcs_c.append(bci_c)
       #print(bci_T)
@@ -166,7 +166,12 @@ if solve_diffusion==True:
   for Neumann in data['physics']['tritium_diffusion']['boundary_conditions']['neumann']:
     value=Neumann['value']
     Neumann_BC_c_diffusion.append([Neumann['value'],Neumann['surface']])
-
+    
+    if type(Neumann['surface'])==list:
+      for surface in Neumann['surface']:
+        Neumann_BC_c_diffusion.append([ds(surface),value])
+    else:
+      Neumann_BC_c_diffusion.append([ds(Neumann['surface']),value])
 
   #Robins
   Robin_BC_c_diffusion=[]
@@ -198,7 +203,7 @@ if solve_temperature==True:
         bcs_T.append(bci_T)
         #print(bci_T)
     else:
-      print(DC)
+      #print(DC)
       bci_T=DirichletBC(V,value_DC,surface_marker,DC['surface'])
       bcs_T.append(bci_T)
       #print(bci_T)
@@ -208,7 +213,13 @@ if solve_temperature==True:
   #Neumann
   Neumann_BC_T_diffusion=[]
   for Neumann in data['physics']['heat_transfers']['boundary_conditions']['neumann']:
-    Neumann_BC_T_diffusion.append([Neumann['value'],Neumann['surface']])
+    value=Neumann['value']
+    
+    if type(Neumann['surface'])==list:
+      for surface in Neumann['surface']:
+        Neumann_BC_T_diffusion.append([ds(surface),value])
+    else:
+      Neumann_BC_T_diffusion.append([ds(Neumann['surface']),value])
 
 
   #Robins
@@ -220,6 +231,8 @@ if solve_temperature==True:
         Robin_BC_T_diffusion.append([ds(surface),Robin['hc_coeff'],Robin['t_amb']])
     else:
       Robin_BC_T_diffusion.append([ds(Robin['surface']),Robin['hc_coeff'],Robin['t_amb']])
+  
+  #print(Neumann_BC_T_diffusion)
 
 
 #read in the volume markers
@@ -252,7 +265,7 @@ else:
   decay=0
 
 thermal_conductivity=Function(V0)
-thermal_conductivity_values=[20.0,20.0,20.0,20.0]
+thermal_conductivity_values=[150.0,150.0,50.0,29.0]
 
 
 ##Assigning each to each cell its properties
@@ -276,7 +289,7 @@ if solve_diffusion==True:
   f = Expression(str(data['physics']['tritium_diffusion']['source_term']),t=0,degree=2)#This is the tritium volumetric source term 
   F=((c-c_n)/dt)*vc*dx + D*dot(grad(c), grad(vc))*dx + (-f+decay*c)*vc*dx 
   for Neumann in Neumann_BC_c_diffusion:
-    F += D*Neumann*vc
+    F += vT * Neumann[1]*Neumann[0] 
   for Robin in Robin_BC_c_diffusion:
     F += D*Robin*vc
   ac,Lc= lhs(F),rhs(F)
@@ -290,7 +303,8 @@ if solve_temperature==True:
   FT = 1e6*((T-T_n)/dt)*vT*dx +thermal_conductivity*dot(grad(T), grad(vT))*dx - q*vT*dx #This is the heat transfer equation     
 
   for Neumann in Neumann_BC_T_diffusion:
-    FT += -1/thermal_conductivity*  Neumann[0]*vT *ds(Neumann[1])
+    #print(Neumann)
+    FT += -1/thermal_conductivity* vT * Neumann[1]*Neumann[0] 
 
   for Robin in Robin_BC_T_diffusion:
     FT += 1/thermal_conductivity *vT* Robin[1] * (T-Robin[2])*Robin[0]
