@@ -9,17 +9,17 @@
       {
         "step_file":"geometry_files/rcb/concrete.stp",
         "material":"concrete",
-        "material_id":2
+        "material_id":3
       },
       {
         "step_file":"geometry_files/rcb/polymer.stp",
         "material":"polymer",
-        "material_id":1
+        "material_id":2
       },
       {
         "step_file":"geometry_files/rcb/steel.stp",
         "material":"steel",
-        "material_id":0
+        "material_id":1
       }
     ],
 
@@ -37,11 +37,15 @@
           "neumann":[
               ],
           "dc":[
+            {
+              "surface":[1,2,3,4,5,6],
+              "value":"450"
+            }
           ],
           "robin":[
           ]
         },
-        "initial_value":1000, 
+        "initial_value":300, 
         "source_term":0 
       },
 
@@ -52,21 +56,24 @@
           "neumann":[
               ],
           "dc":[
+            {
+              "surface":[31,32,33,34,35,36],
+              "value":"1*exp(-t*log(2)/(12.3*365.25*24*3600))"
+            }
           ],
           "robin":[
           ]
         },
-
-        "initial_value": 0,
-        "source_term": 0
+        "initial_value":0, 
+        "source_term":0 
       }
     
 
     
   },
   "solving_parameters":{
-    "final_time":100000000.0, 
-    "number_of_time_steps":10 
+    "final_time":1.9e9, 
+    "number_of_time_steps":20 
   }
 
 }

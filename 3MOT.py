@@ -39,7 +39,26 @@ def byteify(input):
     else:
         return input
 
+def update_bc(t,physic):
+  bcs=list()
+  for DC in data['physics'][physic]['boundary_conditions']['dc']:
+    #value_DC=DC['value'] #todo make this value able to be an Expression (time or space dependent)
+    value_DC=Expression(DC['value'],t=t,degree=2)
+    if type(DC['surface'])==list:
+      for surface in DC['surface']:
+        #print(surface)
+        bci=DirichletBC(V,value_DC,surface_marker,surface)
+        bcs.append(bci)
+        #print(bci_T)
+    else:
+      print(DC)
+      bci=DirichletBC(V,value_DC,surface_marker,DC['surface'])
+      bcs.append(bci)
+      #print(bci_T)
+  return bcs
 
+
+    
 
 print('Getting the databases')
 
@@ -56,10 +75,10 @@ with open(MOT_parameters) as f:
     data = json.load(f)
 
 print('Getting the solvers')
-solve_temperature=True
-solve_diffusion=False
+solve_temperature=False
+solve_diffusion=True
 solve_diffusion_coefficient_temperature_dependent=True
-solve_with_decay=False
+solve_with_decay=True
 calculate_off_gassing=False
 
 data=byteify(data)
@@ -71,8 +90,6 @@ dt = Time / num_steps # time step size
 t=0 #Initialising time to 0s
 
 
-
-cells=2 
 
 print('Defining mesh')
 #Create mesh and define function space
@@ -129,11 +146,19 @@ ds = Measure('ds', domain=mesh, subdomain_data = surface_marker)
 if solve_diffusion==True:
   #DC
   bcs_c=list()
-  for BC in data['physics']['tritium_diffusion']['boundary_conditions']['dc']:
-    value_BC=BC['value'] #todo make this value able to be an Expression (time or space dependent)
-
-    bci_c=DirichletBC(V,value_BC,surface_marker,BC['surface'])
-    bcs_c.append(bci_c)
+  for DC in data['physics']['tritium_diffusion']['boundary_conditions']['dc']:
+    value_DC=Expression(DC['value'],t=0,degree=2)
+    if type(DC['surface'])==list:
+      for surface in DC['surface']:
+        #print(surface)
+        bci_c=DirichletBC(V,value_DC,surface_marker,surface)
+        bcs_c.append(bci_c)
+        #print(bci_T)
+    else:
+      print(DC)
+      bci_c=DirichletBC(V,value_DC,surface_marker,DC['surface'])
+      bcs_c.append(bci_c)
+      #print(bci_T)
 
 
   #Neumann
@@ -158,27 +183,25 @@ if solve_diffusion==True:
 
 
 ##Temperature
-
-
 if solve_temperature==True:
   #DC
   bcs_T=list()
   #bci_T=DirichletBC(V,23,surface_marker,22)
   #bcs_T.append(bci_T)
   for DC in data['physics']['heat_transfers']['boundary_conditions']['dc']:
-    value_DC=DC['value'] #todo make this value able to be an Expression (time or space dependent)
-    
+    #value_DC=DC['value'] #todo make this value able to be an Expression (time or space dependent)
+    value_DC=Expression(DC['value'],t=0,degree=2)
     if type(DC['surface'])==list:
       for surface in DC['surface']:
-        print(surface)
+        #print(surface)
         bci_T=DirichletBC(V,value_DC,surface_marker,surface)
         bcs_T.append(bci_T)
-        print(bci_T)
+        #print(bci_T)
     else:
       print(DC)
       bci_T=DirichletBC(V,value_DC,surface_marker,DC['surface'])
       bcs_T.append(bci_T)
-      print(bci_T)
+      #print(bci_T)
       
 
 
@@ -217,11 +240,11 @@ D  = Function(V0) #Diffusion coefficient
 def calculate_D(T,material_id):
   R=8.314 #Perfect gas constant
   if material_id==1: #Steel
-    return 7.3e-7*np.exp(-6.3e3/T)
+    return 1e-6#7.3e-7*np.exp(-6.3e3/T)
   elif material_id==2: #Polymer
-    return 2.0e-7*np.exp(-29000.0/R/T)
+    return 1e-10#2.0e-7*np.exp(-29000.0/R/T)
   elif material_id==3: #Concrete
-    return 2e-6
+    return 1e-16#2e-6
 
 if solve_with_decay==True:
   decay=np.log(2)/(12.33*365.25*24*3600) #Tritium Decay constant [s-1]
@@ -229,13 +252,14 @@ else:
   decay=0
 
 thermal_conductivity=Function(V0)
-thermal_conductivity_values=[130.0,130.0,130.0,130.0]
+thermal_conductivity_values=[20.0,20.0,20.0,20.0]
 
 
 ##Assigning each to each cell its properties
 for cell_no in range(len(volume_marker.array())):
-  material_id=volume_marker.array()[cell_no]
-  #print(str(material_id))
+  volume_id=volume_marker.array()[cell_no] #This is the volume id
+  #print(str(volume_id))
+  material_id=volume_id
   thermal_conductivity.vector()[cell_no]=thermal_conductivity_values[material_id]
 
   D.vector()[cell_no]=calculate_D(data['physics']['heat_transfers']['initial_value'],material_id)
@@ -250,7 +274,7 @@ if solve_diffusion==True:
   c = TrialFunction(V)#c is the tritium concentration
   vc = TestFunction(V)
   f = Expression(str(data['physics']['tritium_diffusion']['source_term']),t=0,degree=2)#This is the tritium volumetric source term 
-  F=((c-c_n)/dt)*vc*dx + D*dot(grad(c), grad(vc))*dx + (-S+decay*c)*vc*dx 
+  F=((c-c_n)/dt)*vc*dx + D*dot(grad(c), grad(vc))*dx + (-f+decay*c)*vc*dx 
   for Neumann in Neumann_BC_c_diffusion:
     F += D*Neumann*vc
   for Robin in Robin_BC_c_diffusion:
@@ -299,13 +323,14 @@ for n in range(num_steps):
     solve(ac==Lc,c,bcs_c)
     output_file << (c,t)
     c_n.assign(c)
+    bcs_c=update_bc(t,"tritium_diffusion")
   # Compute solution temperature
   if solve_temperature==True:
     q.t += dt
     solve(aT == LT, T, bcs_T)
     output_file << (T,t)
     T_n.assign(T)
-
+    bcs_T=update_bc(t,"heat_transfers")
   #Update the materials properties
   if solve_diffusion_coefficient_temperature_dependent==True and solve_temperature==True and solve_diffusion==True:
     for cell in cells(mesh):
