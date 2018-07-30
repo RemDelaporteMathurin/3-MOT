@@ -70,15 +70,28 @@ print('Getting the databases')
 
 
 materialDB='3-MOT_materials.json'
-MOT_parameters='MOT_parameters_breeder_blankets.json'
+MOT_parameters='MOT_parameters_RCB.json'
 with open(MOT_parameters) as f:
     data = json.load(f)
 
 print('Getting the solvers')
-solve_temperature=True
-solve_diffusion=False
-solve_diffusion_coefficient_temperature_dependent=True
-solve_with_decay=True
+if data['physics']['solve_heat_transfer']==1:
+  solve_temperature=True
+else:
+  solve_temperature=False
+if data['physics']['solve_tritium_diffusion']==1:
+  solve_diffusion=True
+else:
+  solve_diffusion=False
+if data['physics']['diffusion_coeff_temperature_dependent']==1:
+  solve_diffusion_coefficient_temperature_dependent=True
+else:
+  solve_diffusion_coefficient_temperature_dependent=False
+if data['physics']['solve_with_decay']==1:
+  solve_with_decay=True
+else:
+  solve_with_decay=False
+
 calculate_off_gassing=False
 
 data=byteify(data)
@@ -177,13 +190,15 @@ if solve_diffusion==True:
   Robin_BC_c_diffusion=[]
   for Robin in data['physics']['tritium_diffusion']['boundary_conditions']['robin']:
     value=Function(V)
-    value=ast.literal_eval(Robin['expression'])
-
+    value=0
+    #value=ast.literal_eval(Robin['value'])
+    #k=3.56e-8
+    #value=conditional(gt(c_n, 0), k*(c_n)**0.74, Constant(0.0))
     if type(Robin['surface'])==list:
       for surface in Robin['surface']:
-        Robin_BC_c_diffusion.append(value*ds(surface))
+        Robin_BC_c_diffusion.append([ds(surface),value])
     else:
-      Robin_BC_c_diffusion.append(value*ds(Robin['surface']))
+      Robin_BC_c_diffusion.append([ds(Robin['surface']),value])
 
 
 
@@ -291,7 +306,7 @@ if solve_diffusion==True:
   for Neumann in Neumann_BC_c_diffusion:
     F += vT * Neumann[1]*Neumann[0] 
   for Robin in Robin_BC_c_diffusion:
-    F += D*Robin*vc
+    F += D*vc*Robin[1]*Robin[0]
   ac,Lc= lhs(F),rhs(F)
 
 
