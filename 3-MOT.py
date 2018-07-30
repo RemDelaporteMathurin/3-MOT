@@ -8,6 +8,7 @@ import argparse
 import json
 import ast
 from pprint import pprint
+from materials_properties import *
 #os.system('dolfin-convert geo/mesh.inp geo/coucou.xml')
 
 #parser = argparse.ArgumentParser(description='make a mesh')
@@ -58,7 +59,6 @@ def update_bc(t,physic):
   return bcs
 
 
-    
 
 print('Getting the databases')
 
@@ -70,7 +70,7 @@ print('Getting the databases')
 
 
 materialDB='3-MOT_materials.json'
-MOT_parameters='MOT_parameters_RCB.json'
+MOT_parameters='MOT_parameters_breeder_blankets.json'
 with open(MOT_parameters) as f:
     data = json.load(f)
 
@@ -105,17 +105,12 @@ t=0 #Initialising time to 0s
 
 
 print('Defining mesh')
-#Create mesh and define function space
-
-
 # Read in Mesh and markers from file
 mesh = Mesh()
 xdmf_in = XDMFFile(mesh.mpi_comm(), str(data['mesh_file']))
 xdmf_in.read(mesh)
-
-
 # prepare output file for writing by writing the mesh to the file
-xdmf_out = XDMFFile(str(data['mesh_file']).split('.')[1]+'_from_fenics.xdmf')
+#xdmf_out = XDMFFile(str(data['mesh_file']).split('.')[1]+'_from_fenics.xdmf')
 
 subdomains = MeshFunction("size_t", mesh, mesh.topology().dim())
 print('Number of cell is '+ str(len(subdomains.array())))
@@ -132,9 +127,7 @@ if solve_diffusion==True:
   #print(str(data['physics']['tritium_diffusion']['initial_value']))
   iniC = Expression(str(data['physics']['tritium_diffusion']['initial_value']),degree=2) 
   c_n = interpolate(iniC, V)
-
 ##Temperature
-
 if solve_temperature==True:
   #print(str(data['physics']['heat_transfers']['initial_value']))
   iniT = Expression(str(data['physics']['heat_transfers']['initial_value']),degree=2) 
@@ -280,7 +273,7 @@ else:
   decay=0
 
 thermal_conductivity=Function(V0)
-thermal_conductivity_values=[150.0,150.0,50.0,29.0]
+thermal_conductivity_values=[150.0,122.0,16.12,29.0]
 
 
 ##Assigning each to each cell its properties

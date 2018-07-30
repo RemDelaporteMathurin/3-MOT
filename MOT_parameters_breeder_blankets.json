@@ -25,8 +25,8 @@
 
    "physics": {
       "solve_with_decay":1,
-      "solve_tritium_diffusion":1,
-      "solve_heat_transfer":0,
+      "solve_tritium_diffusion":0,
+      "solve_heat_transfer":1,
       "diffusion_coeff_temperature_dependent":0,
       "calculate_off_gassing":0,
       "heat_transfers":{
