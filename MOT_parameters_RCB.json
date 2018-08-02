@@ -28,7 +28,7 @@
       "solve_tritium_diffusion":1,
       "solve_heat_transfer":0,
       "diffusion_coeff_temperature_dependent":0,
-      "calculate_off_gassing":0,
+      "calculate_off_gassing":1,
 
 
 
@@ -41,7 +41,7 @@
           "robin":[
           ]
         },
-        "initial_value":300, 
+        "initial_value":293.15, 
         "source_term":0 
       },
 
@@ -60,7 +60,7 @@
           "robin":[
             {
               "surface":[1,2,3,4,5,6],
-              "value":"1^0.74"
+              "value":"conditional(gt(c_n, 0), k*(c_n)**0.74, Constant(0.0))"
             }
           ]
         },
@@ -73,7 +73,7 @@
   },
   "solving_parameters":{
     "final_time":1.9e9, 
-    "number_of_time_steps":20 
+    "number_of_time_steps":50
   }
 
 }

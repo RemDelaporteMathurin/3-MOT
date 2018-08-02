@@ -63,14 +63,13 @@ def update_bc(t,physic):
 print('Getting the databases')
 
 
-
 #xdmf_encoding = XDMFFile.Encoding.ASCII
 
 #xdmf_encoding = XDMFFile.Encoding.HDF5
 
 
 materialDB='3-MOT_materials.json'
-MOT_parameters='MOT_parameters_breeder_blankets.json'
+MOT_parameters='MOT_parameters_RCB.json'
 with open(MOT_parameters) as f:
     data = json.load(f)
 
@@ -92,7 +91,7 @@ if data['physics']['solve_with_decay']==1:
 else:
   solve_with_decay=False
 
-calculate_off_gassing=False
+calculate_off_gassing=True
 
 data=byteify(data)
 
@@ -179,19 +178,19 @@ if solve_diffusion==True:
     else:
       Neumann_BC_c_diffusion.append([ds(Neumann['surface']),value])
 
-  #Robins
-  Robin_BC_c_diffusion=[]
-  for Robin in data['physics']['tritium_diffusion']['boundary_conditions']['robin']:
-    value=Function(V)
-    value=0
-    #value=ast.literal_eval(Robin['value'])
-    #k=3.56e-8
-    #value=conditional(gt(c_n, 0), k*(c_n)**0.74, Constant(0.0))
-    if type(Robin['surface'])==list:
-      for surface in Robin['surface']:
-        Robin_BC_c_diffusion.append([ds(surface),value])
-    else:
-      Robin_BC_c_diffusion.append([ds(Robin['surface']),value])
+
+#Robins
+Robin_BC_c_diffusion=[]
+for Robin in data['physics']['tritium_diffusion']['boundary_conditions']['robin']:
+  value=Function(V)
+  k=3.56e-8
+  value=eval(Robin['value'])
+  #value=conditional(gt(c_n, 0), k*(c_n)**0.74, Constant(0.0))
+  if type(Robin['surface'])==list:
+    for surface in Robin['surface']:
+      Robin_BC_c_diffusion.append([ds(surface),value])
+  else:
+    Robin_BC_c_diffusion.append([ds(Robin['surface']),value])
 
 
 
@@ -260,12 +259,12 @@ D  = Function(V0) #Diffusion coefficient
 
 def calculate_D(T,material_id):
   R=8.314 #Perfect gas constant
-  if material_id==1: #Steel
-    return 1e-6#7.3e-7*np.exp(-6.3e3/T)
+  if material_id==1: #Concrete
+    return 2e-6#7.3e-7*np.exp(-6.3e3/T)
   elif material_id==2: #Polymer
-    return 1e-10#2.0e-7*np.exp(-29000.0/R/T)
-  elif material_id==3: #Concrete
-    return 1e-16#2e-6
+    return 2.0e-7*np.exp(-29000.0/R/T)
+  elif material_id==3: #steel
+    return 7.3e-7*np.exp(-6.3e3/T)#1e-16#2e-6
 
 if solve_with_decay==True:
   decay=np.log(2)/(12.33*365.25*24*3600) #Tritium Decay constant [s-1]
@@ -284,6 +283,7 @@ for cell_no in range(len(volume_marker.array())):
   thermal_conductivity.vector()[cell_no]=thermal_conductivity_values[material_id]
 
   D.vector()[cell_no]=calculate_D(data['physics']['heat_transfers']['initial_value'],material_id)
+  
   #print(D.vector()[cell_no])
 
 
@@ -327,7 +327,7 @@ off_gassing=list()
 output_file  = File("Solution.pvd")
 
 if calculate_off_gassing==True:
-  file_off_gassing = "Solutions/Off-gassing/off_gassing.csv"
+  file_off_gassing = "off_gassing.csv"
 
 for n in range(num_steps):
 
@@ -367,14 +367,17 @@ for n in range(num_steps):
   
   #Calculate off-gassing
   if calculate_off_gassing==True:
-    off_gassing_per_day=assemble(g*ds(1,domain=mesh))*24*3600 #off-gassing in mol/day
+    #g=conditional(gt(c_n, 0), k*(c_n)**0.74, Constant(0.0))
+    g=Robin_BC_c_diffusion[0][1]
+    #off_gassing_per_day=3600*24*(assemble(g*ds(1))+assemble(g*ds(2))+assemble(g*ds(3))+assemble(g*ds(4))+assemble(g*ds(5))+assemble(g*ds(6)))/dt #off-gassing in mol/day
+    off_gassing_per_day=assemble(g*ds)/dt*24*3600
+    #off_gassing+=assemble(g*ds(2))*24*3600 +assemble(g*ds(3))*24*3600 +assemble(g*ds(4)*24*3600)  +assemble(g*ds(5)*24*3600)  +assemble(g*ds(6)*24*3600 )
     i=0
     print(off_gassing_per_day)
-    while i<int(dt/24/3600):
-      off_gassing.append(off_gassing_per_day)
-      i+=1
+    off_gassing.append([off_gassing_per_day,t/3600/24/365])
+
     with open(file_off_gassing, "w") as output:
       writer = csv.writer(output, lineterminator='\n')
-      writer.writerow('c')
+      writer.writerow('ct')
       for val in off_gassing:
-        writer.writerow([val])
+        writer.writerows([val])
