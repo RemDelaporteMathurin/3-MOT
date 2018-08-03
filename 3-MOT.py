@@ -170,7 +170,6 @@ if solve_diffusion==True:
   Neumann_BC_c_diffusion=[]
   for Neumann in data['physics']['tritium_diffusion']['boundary_conditions']['neumann']:
     value=Neumann['value']
-    Neumann_BC_c_diffusion.append([Neumann['value'],Neumann['surface']])
     
     if type(Neumann['surface'])==list:
       for surface in Neumann['surface']:
@@ -179,18 +178,18 @@ if solve_diffusion==True:
       Neumann_BC_c_diffusion.append([ds(Neumann['surface']),value])
 
 
-#Robins
-Robin_BC_c_diffusion=[]
-for Robin in data['physics']['tritium_diffusion']['boundary_conditions']['robin']:
-  value=Function(V)
-  k=3.56e-8
-  value=eval(Robin['value'])
-  #value=conditional(gt(c_n, 0), k*(c_n)**0.74, Constant(0.0))
-  if type(Robin['surface'])==list:
-    for surface in Robin['surface']:
-      Robin_BC_c_diffusion.append([ds(surface),value])
-  else:
-    Robin_BC_c_diffusion.append([ds(Robin['surface']),value])
+  #Robins
+  Robin_BC_c_diffusion=[]
+  for Robin in data['physics']['tritium_diffusion']['boundary_conditions']['robin']:
+    value=Function(V)
+    k=3.56e-8
+    value=eval(Robin['value'])
+    #value=conditional(gt(c_n, 0), k*(c_n)**0.74, Constant(0.0))
+    if type(Robin['surface'])==list:
+      for surface in Robin['surface']:
+        Robin_BC_c_diffusion.append([ds(surface),value])
+    else:
+      Robin_BC_c_diffusion.append([ds(Robin['surface']),value])
 
 
 
@@ -243,7 +242,7 @@ if solve_temperature==True:
 
 
 #read in the volume markers
-volume_marker_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim() - 1)
+volume_marker_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
 xdmf_in.read(volume_marker_mvc, "volume_marker_material")
 
 #volume_marker_mvc.rename("volume_marker_material", "volume_marker_material")
@@ -297,7 +296,7 @@ if solve_diffusion==True:
   f = Expression(str(data['physics']['tritium_diffusion']['source_term']),t=0,degree=2)#This is the tritium volumetric source term 
   F=((c-c_n)/dt)*vc*dx + D*dot(grad(c), grad(vc))*dx + (-f+decay*c)*vc*dx 
   for Neumann in Neumann_BC_c_diffusion:
-    F += vT * Neumann[1]*Neumann[0] 
+    F += vc * Neumann[1]*Neumann[0] 
   for Robin in Robin_BC_c_diffusion:
     F += D*vc*Robin[1]*Robin[0]
   ac,Lc= lhs(F),rhs(F)
@@ -316,8 +315,6 @@ if solve_temperature==True:
 
   for Robin in Robin_BC_T_diffusion:
     FT += 1/thermal_conductivity *vT* Robin[1] * (T-Robin[2])*Robin[0]
-
-
   aT, LT = lhs(FT), rhs(FT) #Rearranging the equation
 
 ### Time-stepping
@@ -369,8 +366,10 @@ for n in range(num_steps):
   if calculate_off_gassing==True:
     #g=conditional(gt(c_n, 0), k*(c_n)**0.74, Constant(0.0))
     g=Robin_BC_c_diffusion[0][1]
-    #off_gassing_per_day=3600*24*(assemble(g*ds(1))+assemble(g*ds(2))+assemble(g*ds(3))+assemble(g*ds(4))+assemble(g*ds(5))+assemble(g*ds(6)))/dt #off-gassing in mol/day
-    off_gassing_per_day=assemble(g*ds)/dt*24*3600
+    off_gassing_per_day=3600*24*(assemble(g*ds(1))+assemble(g*ds(2))+assemble(g*ds(3))+assemble(g*ds(4))+assemble(g*ds(5))+assemble(g*ds(6)))/dt #off-gassing in mol/day
+    #surface_ext=assemble(1*(ds(1)+ds(2)+ds(3)+ds(4)+ds(5)+ds(6)))
+    #print(surface_ext)
+    #off_gassing_per_day=assemble(g*ds)/dt*24*3600
     #off_gassing+=assemble(g*ds(2))*24*3600 +assemble(g*ds(3))*24*3600 +assemble(g*ds(4)*24*3600)  +assemble(g*ds(5)*24*3600)  +assemble(g*ds(6)*24*3600 )
     i=0
     print(off_gassing_per_day)
