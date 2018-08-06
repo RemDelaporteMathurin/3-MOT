@@ -9,24 +9,6 @@ import json
 import ast
 from pprint import pprint
 from materials_properties import *
-#os.system('dolfin-convert geo/mesh.inp geo/coucou.xml')
-
-#parser = argparse.ArgumentParser(description='make a mesh')
-#parser.add_argument("thickness")
-#args = parser.parse_args()
-
-#print(args)
-
-#steel_thickness = float(args.thickness)
-
-#parser = argparse.ArgumentParser()
-
-# parser.add_argument("-m","--mesh", help="XDMF Mesh file input ", required=False, default='mesh_and_markers.xdmf')
-# parser.add_argument("-om","--output_mesh", help="XDMF Mesh file output ", required=False, default='mesh_and_markers_from_fenics.xdmf')
-# parser.add_argument("-ot","--output_temperature", help="XDMF Mesh file output with temperature", required=False, default='temperature_output.xdmf')
-#parser.add_argument("-j","--json_input", help="XDMF Mesh file output with temperature", required=True)
-
-#args = parser.parse_args()
 
 
 def byteify(input):
@@ -197,8 +179,6 @@ if solve_diffusion==True:
 if solve_temperature==True:
   #DC
   bcs_T=list()
-  #bci_T=DirichletBC(V,23,surface_marker,22)
-  #bcs_T.append(bci_T)
   for DC in data['physics']['heat_transfers']['boundary_conditions']['dc']:
     #value_DC=DC['value'] #todo make this value able to be an Expression (time or space dependent)
     value_DC=Expression(DC['value'],t=0,degree=2)
@@ -255,6 +235,9 @@ volume_marker = MeshFunction("size_t", mesh, volume_marker_mvc)
 print('Defining the materials properties')
 
 D  = Function(V0) #Diffusion coefficient
+thermal_conductivity=Function(V0)
+specific_heat=Function(V0)
+density=Function(V0)
 
 def calculate_D(T,material_id):
   R=8.314 #Perfect gas constant
@@ -264,24 +247,41 @@ def calculate_D(T,material_id):
     return 2.0e-7*np.exp(-29000.0/R/T)
   elif material_id==3: #steel
     return 7.3e-7*np.exp(-6.3e3/T)#1e-16#2e-6
+def thermal_conductivity(T,material_id):
+  R=8.314 #Perfect gas constant
+  if material_id==1: #tungsten
+    return 174
+  elif material_id==2: #LiPb
+    return 20
+  elif material_id==3: #Eurofer
+    return 16.12
+def specific_heat(T,material_id):
+  R=8.314 #Perfect gas constant
+  return 1
+def density(T,material_id):
+  R=8.314 #Perfect gas constant
+  return 1e6
 
 if solve_with_decay==True:
   decay=np.log(2)/(12.33*365.25*24*3600) #Tritium Decay constant [s-1]
 else:
   decay=0
 
-thermal_conductivity=Function(V0)
-thermal_conductivity_values=[150.0,122.0,16.12,29.0]
+
+
 
 
 ##Assigning each to each cell its properties
 for cell_no in range(len(volume_marker.array())):
-  volume_id=volume_marker.array()[cell_no] #This is the volume id
+  volume_id=volume_marker.array()[cell_no] #This is the volume id (Trellis)
   #print(str(volume_id))
   material_id=volume_id
-  thermal_conductivity.vector()[cell_no]=thermal_conductivity_values[material_id]
-
-  D.vector()[cell_no]=calculate_D(data['physics']['heat_transfers']['initial_value'],material_id)
+  if solve_temperature==True:
+    thermal_conductivity.vector()[cell_no]=thermal_conductivity(data['physics']['heat_transfers']['initial_value'],material_id)
+    density.vector()[cell_no]=density(data['physics']['heat_transfers']['initial_value'],material_id)
+    specific_heat.vector()[cell_no]=specific_heat(data['physics']['heat_transfers']['initial_value'],material_id)
+  if solve_diffusion==True:
+    D.vector()[cell_no]=calculate_D(data['physics']['heat_transfers']['initial_value'],material_id)
   
   #print(D.vector()[cell_no])
 
@@ -307,14 +307,14 @@ if solve_temperature==True:
   vT = TestFunction(V)
   q = Expression(str(data['physics']['heat_transfers']['source_term']),t=0,degree=2) #q is the volumetric heat source term
   
-  FT = 1e6*((T-T_n)/dt)*vT*dx +thermal_conductivity*dot(grad(T), grad(vT))*dx - q*vT*dx #This is the heat transfer equation     
+  FT = specific_heat*density*((T-T_n)/dt)*vT*dx +thermal_conductivity*dot(grad(T), grad(vT))*dx - q*vT*dx #This is the heat transfer equation     
 
   for Neumann in Neumann_BC_T_diffusion:
     #print(Neumann)
-    FT += -1/thermal_conductivity* vT * Neumann[1]*Neumann[0] 
+    FT += - vT * Neumann[1]*Neumann[0] 
 
   for Robin in Robin_BC_T_diffusion:
-    FT += 1/thermal_conductivity *vT* Robin[1] * (T-Robin[2])*Robin[0]
+    FT += vT* Robin[1] * (T-Robin[2])*Robin[0]
   aT, LT = lhs(FT), rhs(FT) #Rearranging the equation
 
 ### Time-stepping
@@ -366,11 +366,7 @@ for n in range(num_steps):
   if calculate_off_gassing==True:
     #g=conditional(gt(c_n, 0), k*(c_n)**0.74, Constant(0.0))
     g=Robin_BC_c_diffusion[0][1]
-    off_gassing_per_day=3600*24*(assemble(g*ds(1))+assemble(g*ds(2))+assemble(g*ds(3))+assemble(g*ds(4))+assemble(g*ds(5))+assemble(g*ds(6)))/dt #off-gassing in mol/day
-    #surface_ext=assemble(1*(ds(1)+ds(2)+ds(3)+ds(4)+ds(5)+ds(6)))
-    #print(surface_ext)
-    #off_gassing_per_day=assemble(g*ds)/dt*24*3600
-    #off_gassing+=assemble(g*ds(2))*24*3600 +assemble(g*ds(3))*24*3600 +assemble(g*ds(4)*24*3600)  +assemble(g*ds(5)*24*3600)  +assemble(g*ds(6)*24*3600 )
+    off_gassing_per_day=3600*24*(assemble(g*ds(1))+assemble(g*ds(2))+assemble(g*ds(3))+assemble(g*ds(4))+assemble(g*ds(5))+assemble(g*ds(6))) #off-gassing in mol/day
     i=0
     print(off_gassing_per_day)
     off_gassing.append([off_gassing_per_day,t/3600/24/365])
