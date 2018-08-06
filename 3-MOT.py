@@ -9,7 +9,7 @@ import json
 import ast
 from pprint import pprint
 from materials_properties import *
-
+import inspect
 
 def byteify(input):
     if isinstance(input, dict):
@@ -40,8 +40,6 @@ def update_bc(t,physic):
       #print(bci_T)
   return bcs
 
-
-
 print('Getting the databases')
 
 
@@ -50,10 +48,10 @@ print('Getting the databases')
 #xdmf_encoding = XDMFFile.Encoding.HDF5
 
 
-materialDB='3-MOT_materials.json'
 MOT_parameters='MOT_parameters_RCB.json'
 with open(MOT_parameters) as f:
     data = json.load(f)
+data=byteify(data)
 
 print('Getting the solvers')
 if data['physics']['solve_heat_transfer']==1:
@@ -75,7 +73,7 @@ else:
 
 calculate_off_gassing=True
 
-data=byteify(data)
+
 
 print('Defining the solving parameters')
 Time = float(data["solving_parameters"]['final_time'])  #60000*365.25*24*3600.0# final time 
@@ -241,45 +239,75 @@ density=Function(V0)
 
 def calculate_D(T,material_id):
   R=8.314 #Perfect gas constant
-  if material_id==1: #Concrete
+  if material_id=="concrete": #Concrete
     return 2e-6#7.3e-7*np.exp(-6.3e3/T)
-  elif material_id==2: #Polymer
+  elif material_id=="polymer": #Polymer
     return 2.0e-7*np.exp(-29000.0/R/T)
-  elif material_id==3: #steel
+  elif material_id=="steel": #steel
     return 7.3e-7*np.exp(-6.3e3/T)#1e-16#2e-6
-def thermal_conductivity(T,material_id):
+  else:
+    print("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
+    return sys.exit(0)
+def calculate_thermal_conductivity(T,material_id):
   R=8.314 #Perfect gas constant
-  if material_id==1: #tungsten
-    return 174
-  elif material_id==2: #LiPb
-    return 20
-  elif material_id==3: #Eurofer
-    return 16.12
-def specific_heat(T,material_id):
+  if material_id=="concrete":
+    return 0.5
+  elif material_id=="tungsten":
+    return 150
+  elif material_id=="lithium_lead":
+    return 50
+  elif material_id=="eurofer":
+    return 29
+  else:
+    print("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
+    return sys.exit(0)
+def calculate_specific_heat(T,material_id):
   R=8.314 #Perfect gas constant
-  return 1
-def density(T,material_id):
+  if material_id=="concrete":
+    return 880
+  elif material_id=="tungsten":
+    return 130
+  elif material_id=="lithium_lead":
+    return 500
+  elif material_id=="eurofer":
+    return 675
+  else:
+    print("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
+    return sys.exit(0)
+def calculate_density(T,material_id):
   R=8.314 #Perfect gas constant
-  return 1e6
+  if material_id=="concrete":
+    return 2400
+  elif material_id=="tungsten":
+    return 19600
+  elif material_id=="lithium_lead":
+    return 11600
+  elif material_id=="eurofer":
+    return 7625
+  else:
+    print("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
+    return sys.exit(0)
 
-if solve_with_decay==True:
-  decay=np.log(2)/(12.33*365.25*24*3600) #Tritium Decay constant [s-1]
-else:
-  decay=0
 
 
-
+def which_material_is_it(volume_id):
+  for material in data["structure_and_materials"]["materials"]:
+    for volumes in material["volumes"]:
+      if volume_id in [volumes]:
+        #print('Coucou toi')
+        material_id=material["material"]
+        break
+  return material_id
 
 
 ##Assigning each to each cell its properties
 for cell_no in range(len(volume_marker.array())):
   volume_id=volume_marker.array()[cell_no] #This is the volume id (Trellis)
-  #print(str(volume_id))
-  material_id=volume_id
+  material_id=which_material_is_it(volume_id)
   if solve_temperature==True:
-    thermal_conductivity.vector()[cell_no]=thermal_conductivity(data['physics']['heat_transfers']['initial_value'],material_id)
-    density.vector()[cell_no]=density(data['physics']['heat_transfers']['initial_value'],material_id)
-    specific_heat.vector()[cell_no]=specific_heat(data['physics']['heat_transfers']['initial_value'],material_id)
+    thermal_conductivity.vector()[cell_no]=calculate_thermal_conductivity(data['physics']['heat_transfers']['initial_value'],material_id)
+    density.vector()[cell_no]=calculate_density(data['physics']['heat_transfers']['initial_value'],material_id)
+    specific_heat.vector()[cell_no]=calculate_specific_heat(data['physics']['heat_transfers']['initial_value'],material_id)
   if solve_diffusion==True:
     D.vector()[cell_no]=calculate_D(data['physics']['heat_transfers']['initial_value'],material_id)
   
@@ -293,6 +321,11 @@ print('Defining the variational problem')
 if solve_diffusion==True:
   c = TrialFunction(V)#c is the tritium concentration
   vc = TestFunction(V)
+  if solve_with_decay==True:
+    decay=np.log(2)/(12.33*365.25*24*3600) #Tritium Decay constant [s-1]
+  else:
+    decay=0
+  
   f = Expression(str(data['physics']['tritium_diffusion']['source_term']),t=0,degree=2)#This is the tritium volumetric source term 
   F=((c-c_n)/dt)*vc*dx + D*dot(grad(c), grad(vc))*dx + (-f+decay*c)*vc*dx 
   for Neumann in Neumann_BC_c_diffusion:
@@ -321,7 +354,7 @@ if solve_temperature==True:
 T = Function(V)
 c = Function(V)
 off_gassing=list()
-output_file  = File("Solution.pvd")
+output_file  = File(data["output_file"])
 
 if calculate_off_gassing==True:
   file_off_gassing = "off_gassing.csv"

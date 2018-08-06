@@ -3,30 +3,31 @@
 
     "mesh_file" : "mesh_and_markers_RCB.xdmf",
 
-    "field_file" : "field.xdmf",
+    "output_file" : "solution.pvd",
 
-    "structure_and_materials": [
-      {
-        "step_file":"geometry_files/rcb/concrete.stp",
-        "material":"concrete",
-        "material_id":3
-      },
-      {
-        "step_file":"geometry_files/rcb/polymer.stp",
-        "material":"polymer",
-        "material_id":2
-      },
-      {
-        "step_file":"geometry_files/rcb/steel.stp",
-        "material":"steel",
-        "material_id":1
-      }
-    ],
+
+    "structure_and_materials": {
+      "step_files":["geometry_files/rcb/concrete.stp","geometry_files/rcb/polymer.stp","geometry_files/rcb/steel.stp"],
+      "materials":[
+        {
+          "volumes":[1],
+          "material":"concrete"
+        },
+        {
+          "volumes":[2],
+          "material":"polymer"
+        },
+        {
+          "volumes":[3],
+          "material":"steel"
+        }
+      ]
+    },
 
    "physics": {
       "solve_with_decay":1,
       "solve_tritium_diffusion":1,
-      "solve_heat_transfer":0,
+      "solve_heat_transfer":1,
       "diffusion_coeff_temperature_dependent":0,
       "calculate_off_gassing":1,
 

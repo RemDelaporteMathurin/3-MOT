@@ -33,12 +33,10 @@ def read_arguments_from_json_file(aprepro_vars):
   structure_step_files=[]
   materials=[]
   material_ids=[]
-  for entry in structure_and_materials:
-    structure_step_files.append(entry['step_file'])
-    print(entry['step_file'])
-    materials.append(entry['material'])
-    material_ids.append(entry['material_id'])
-  return quality, outputfile, structure_step_files, materials, material_ids
+  for entry in structure_and_materials["step_files"]:
+    structure_step_files.append(entry)
+    print(entry)
+  return quality, outputfile, structure_step_files
 
 def find_external_surfaces():
   print('looking for merged surfaces')
@@ -75,7 +73,7 @@ for var_name in aprepro_vars:
   val = cubit.get_aprepro_value_as_string(var_name)
   print("{0} = {1}".format(var_name, val))
 
-quality, outputfile, structure_step_files, materials, material_ids=read_arguments_from_json_file(aprepro_vars)
+quality, outputfile, structure_step_files=read_arguments_from_json_file(aprepro_vars)
 
 
 cubit.cmd('reset')

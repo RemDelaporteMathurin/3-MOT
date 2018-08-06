@@ -1,27 +1,27 @@
 {
     "quality" : "5",
 
-    "mesh_file" : "mesh_and_markers_breeder_blankets.xdmf",
+    "mesh_file" : "mesh_and_markers_breeder_blankets2.xdmf",
 
     "field_file" : "field.xdmf",
 
-    "structure_and_materials": [
-      {
-        "step_file":"geometry_files/rcb/concrete.stp",
-        "material":"concrete",
-        "material_id":3
-      },
-      {
-        "step_file":"geometry_files/rcb/polymer.stp",
-        "material":"polymer",
-        "material_id":2
-      },
-      {
-        "step_file":"geometry_files/rcb/steel.stp",
-        "material":"steel",
-        "material_id":1
-      }
-    ],
+    "structure_and_materials": {
+      "step_files":["geometry_files/breeder_blanket/slice_armour_mod1.step","geometry_files/breeder_blanket/slice_back_helium_mod1.step","geometry_files/breeder_blanket/slice_back_lithium_lead_mod1.step","geometry_files/breeder_blanket/slice_back_plate_1_mod1.step","geometry_files/breeder_blanket/slice_back_plate_2_mod1.step","geometry_files/breeder_blanket/slice_back_plate_3_mod1.step","geometry_files/breeder_blanket/slice_cooling_plate_coolant_mod1.step","geometry_files/breeder_blanket/slice_cooling_plate_material_mod1.step","geometry_files/breeder_blanket/slice_first_wall_coolant_mod1.step","geometry_files/breeder_blanket/slice_first_wall_material_mod1.step","geometry_files/breeder_blanket/slice_lithium_lead_mod1.step"],
+      "materials":[
+        {
+          "volume":[3],
+          "material":"lithium_lead"
+        },
+        {
+          "volume":[2],
+          "material":"eurofer"
+        },
+        {
+          "volume":[1],
+          "material":"tungsten"
+        }
+      ]
+    },
 
    "physics": {
       "solve_with_decay":1,
