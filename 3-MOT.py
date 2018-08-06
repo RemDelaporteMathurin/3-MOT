@@ -43,6 +43,8 @@ def update_bc(t,physic):
 print('Getting the databases')
 
 
+
+
 #xdmf_encoding = XDMFFile.Encoding.ASCII
 
 #xdmf_encoding = XDMFFile.Encoding.HDF5
@@ -55,9 +57,9 @@ data=byteify(data)
 
 print('Getting the solvers')
 if data['physics']['solve_heat_transfer']==1:
-  solve_temperature=True
+  solve_heat_transfer=True
 else:
-  solve_temperature=False
+  solve_heat_transfer=False
 if data['physics']['solve_tritium_diffusion']==1:
   solve_diffusion=True
 else:
@@ -107,7 +109,7 @@ if solve_diffusion==True:
   iniC = Expression(str(data['physics']['tritium_diffusion']['initial_value']),degree=2) 
   c_n = interpolate(iniC, V)
 ##Temperature
-if solve_temperature==True:
+if solve_heat_transfer==True:
   #print(str(data['physics']['heat_transfers']['initial_value']))
   iniT = Expression(str(data['physics']['heat_transfers']['initial_value']),degree=2) 
   T_n = interpolate(iniT, V)
@@ -174,7 +176,7 @@ if solve_diffusion==True:
 
 
 ##Temperature
-if solve_temperature==True:
+if solve_heat_transfer==True:
   #DC
   bcs_T=list()
   for DC in data['physics']['heat_transfers']['boundary_conditions']['dc']:
@@ -227,7 +229,7 @@ xdmf_in.read(volume_marker_mvc, "volume_marker_material")
 #xdmf_out.write(volume_marker_mvc, xdmf_encoding)
 
 volume_marker = MeshFunction("size_t", mesh, volume_marker_mvc)
-
+dx = Measure('dx', domain=mesh, subdomain_data=volume_marker)
 
 ###Defining materials properties
 print('Defining the materials properties')
@@ -275,6 +277,7 @@ def calculate_specific_heat(T,material_id):
     print("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
     return sys.exit(0)
 def calculate_density(T,material_id):
+
   R=8.314 #Perfect gas constant
   if material_id=="concrete":
     return 2400
@@ -288,9 +291,7 @@ def calculate_density(T,material_id):
     print("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
     return sys.exit(0)
 
-
-
-def which_material_is_it(volume_id):
+def which_material_is_it(volume_id,data):
   for material in data["structure_and_materials"]["materials"]:
     for volumes in material["volumes"]:
       if volume_id in [volumes]:
@@ -303,8 +304,8 @@ def which_material_is_it(volume_id):
 ##Assigning each to each cell its properties
 for cell_no in range(len(volume_marker.array())):
   volume_id=volume_marker.array()[cell_no] #This is the volume id (Trellis)
-  material_id=which_material_is_it(volume_id)
-  if solve_temperature==True:
+  material_id=which_material_is_it(volume_id,data)
+  if solve_heat_transfer==True:
     thermal_conductivity.vector()[cell_no]=calculate_thermal_conductivity(data['physics']['heat_transfers']['initial_value'],material_id)
     density.vector()[cell_no]=calculate_density(data['physics']['heat_transfers']['initial_value'],material_id)
     specific_heat.vector()[cell_no]=calculate_specific_heat(data['physics']['heat_transfers']['initial_value'],material_id)
@@ -335,7 +336,7 @@ if solve_diffusion==True:
   ac,Lc= lhs(F),rhs(F)
 
 
-if solve_temperature==True:
+if solve_heat_transfer==True:
   T = TrialFunction(V) #T is the temperature
   vT = TestFunction(V)
   q = Expression(str(data['physics']['heat_transfers']['source_term']),t=0,degree=2) #q is the volumetric heat source term
@@ -377,14 +378,14 @@ for n in range(num_steps):
     c_n.assign(c)
     bcs_c=update_bc(t,"tritium_diffusion")
   # Compute solution temperature
-  if solve_temperature==True:
+  if solve_heat_transfer==True:
     q.t += dt
     solve(aT == LT, T, bcs_T)
     output_file << (T,t)
     T_n.assign(T)
     bcs_T=update_bc(t,"heat_transfers")
   #Update the materials properties
-  if solve_diffusion_coefficient_temperature_dependent==True and solve_temperature==True and solve_diffusion==True:
+  if solve_diffusion_coefficient_temperature_dependent==True and solve_heat_transfer==True and solve_diffusion==True:
     for cell in cells(mesh):
       cell_no=cell.index()
       material_id=volume_marker.array()[cell_no]
