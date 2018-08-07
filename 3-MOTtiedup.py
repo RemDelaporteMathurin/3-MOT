@@ -56,6 +56,7 @@ def get_solvers(data):
     return solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,solve_with_decay
 
 def get_solving_parameters(data):
+    print('Getting the solving parameters')
     Time = float(data["solving_parameters"]['final_time'])  #60000*365.25*24*3600.0# final time 
     num_steps = data['solving_parameters']['number_of_time_steps'] # number of time steps
     dt = Time / num_steps # time step size
@@ -81,22 +82,24 @@ def define_functionspaces(data):
     return V,V0
 
 def define_initial_values(solve_heat_transfer,solve_diffusion,data,V):
-    print('Defining initial values')
     ##Tritium concentration
     c_n=Function(V)
     T_n=Function(V)
     if solve_diffusion==True:
+      print('Defining initial values tritium diffusion')
       #print(str(data['physics']['tritium_diffusion']['initial_value']))
       iniC = Expression(str(data['physics']['tritium_diffusion']['initial_value']),degree=2) 
       c_n = interpolate(iniC, V)
     ##Temperature
     if solve_heat_transfer==True:
+      print('Defining initial values heat transfer')
       #print(str(data['physics']['heat_transfers']['initial_value']))
       iniT = Expression(str(data['physics']['heat_transfers']['initial_value']),degree=2) 
       T_n = interpolate(iniT, V)
     return c_n,T_n
 
 def get_surface_marker(mesh,xdmf_in):
+    print('Marking the surfaces')
     # read in Surface markers for boundary conditions
     surface_marker_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim() - 1)
     xdmf_in.read(surface_marker_mvc, "surface_marker")
@@ -113,6 +116,7 @@ def define_BC_diffusion(data,solve_diffusion,V,surface_marker,ds):
     Neumann_BC_c_diffusion=[]
     Robin_BC_c_diffusion=[]
     if solve_diffusion==True:
+      print('Defining BC tritium diffusion')
       #DC
       for DC in data['physics']['tritium_diffusion']['boundary_conditions']['dc']:
         value_DC=Expression(DC['value'],t=0,degree=2)
@@ -150,14 +154,13 @@ def define_BC_diffusion(data,solve_diffusion,V,surface_marker,ds):
     return bcs_c,Neumann_BC_c_diffusion,Robin_BC_c_diffusion
 
 def define_BC_heat_transfer(data,solve_heat_transfer,V,surface_marker,ds):
-    print('Defining BC heat transfer')
-    print(solve_heat_transfer)
     ##Temperature
     bcs_T=list()
     Neumann_BC_T_diffusion=[]
     Robin_BC_T_diffusion=[]
 
     if solve_heat_transfer==True:
+      print('Defining BC heat transfer')
       #DC
       for DC in data['physics']['heat_transfers']['boundary_conditions']['dc']:
         #value_DC=DC['value'] #todo make this value able to be an Expression (time or space dependent)
@@ -197,6 +200,7 @@ def define_BC_heat_transfer(data,solve_heat_transfer,V,surface_marker,ds):
     return bcs_T,Neumann_BC_T_diffusion,Robin_BC_T_diffusion
 
 def get_volume_markers(mesh):
+    print('Marking the volumes')
     #read in the volume markers
     volume_marker_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
     xdmf_in.read(volume_marker_mvc, "volume_marker_material")
@@ -292,6 +296,7 @@ def define_materials_properties(V0,data,volume_marker):
 
 def define_variational_problem_diffusion(solve_diffusion,solve_with_decay,V,data):
     if solve_diffusion==True:
+      print('Defining variation problem tritium diffusion')
         c = TrialFunction(V)#c is the tritium concentration
         vc = TestFunction(V)
         if solve_with_decay==True:
@@ -311,6 +316,7 @@ def define_variational_problem_diffusion(solve_diffusion,solve_with_decay,V,data
 def define_variational_problem_heat_transfer(solve_heat_transfer,V,data):
     
     if solve_heat_transfer==True:
+        print('Defining variation problem heat transfer')
         T = TrialFunction(V) #T is the temperature
         vT = TestFunction(V)
         q = Expression(str(data['physics']['heat_transfers']['source_term']),t=0,degree=2) #q is the volumetric heat source term
@@ -355,6 +361,7 @@ def update_bc(t,physic):
 
 def time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,F,f,bcs_c,FT,q,bcs_T,ds):
     ### Time-stepping
+    print('Time stepping')
     T = Function(V)
     c = Function(V)
     off_gassing=list()
