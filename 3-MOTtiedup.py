@@ -131,7 +131,6 @@ def define_BC_diffusion(data,solve_diffusion,V,surface_marker,ds):
       #Neumann
       for Neumann in data['physics']['tritium_diffusion']['boundary_conditions']['neumann']:
         value=Neumann['value']
-
         if type(Neumann['surface'])==list:
           for surface in Neumann['surface']:
             Neumann_BC_c_diffusion.append([ds(surface),value])
@@ -141,7 +140,6 @@ def define_BC_diffusion(data,solve_diffusion,V,surface_marker,ds):
       #Robins
       for Robin in data['physics']['tritium_diffusion']['boundary_conditions']['robin']:
         value=Function(V)
-        k=3.56e-8
         value=eval(Robin['value'])
         #value=conditional(gt(c_n, 0), k*(c_n)**0.74, Constant(0.0))
         if type(Robin['surface'])==list:
@@ -327,15 +325,16 @@ def define_variational_problem_heat_transfer(solve_heat_transfer,V,data):
     return False,False
 
 def update_D(mesh,volume_marker,D,T):
-    for cell in cells(mesh):
-      cell_no=cell.index()
-      material_id=volume_marker.array()[cell_no]
-      Ta=0
-      for i in range(0,12,3):
-        Ta+=T(cell.get_vertex_coordinates()[i],cell.get_vertex_coordinates()[i+1],cell.get_vertex_coordinates()[i+2])
-      Ta=Ta/4
-      D_value = calculate_D(Ta,material_id)
-      D.vector()[cell_no] = D_value #Assigning for each cell the corresponding diffusion coeff
+  for cell in cells(mesh):
+    cell_no=cell.index()
+    material_id=volume_marker.array()[cell_no]
+    Ta=0
+    for i in range(0,12,3):
+      Ta+=T(cell.get_vertex_coordinates()[i],cell.get_vertex_coordinates()[i+1],cell.get_vertex_coordinates()[i+2])
+    Ta=Ta/4
+    D_value = calculate_D(Ta,material_id)
+    D.vector()[cell_no] = D_value #Assigning for each cell the corresponding diffusion coeff
+  return D
 def update_bc(t,physic):
   bcs=list()
   for DC in data['physics'][physic]['boundary_conditions']['dc']:
@@ -354,16 +353,15 @@ def update_bc(t,physic):
       #print(bci_T)
   return bcs
 
-def time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,F,f,bcs_c,FT,q,bcs_T):
+def time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,F,f,bcs_c,FT,q,bcs_T,ds):
     ### Time-stepping
     T = Function(V)
     c = Function(V)
     off_gassing=list()
     output_file  = File(data["output_file"])
-
-    #if calculate_off_gassing==True:
-    #  file_off_gassing = "off_gassing.csv"
     t=0
+
+    n0 = FacetNormal(mesh)
     for n in range(num_steps):
 
     
@@ -390,7 +388,15 @@ def time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficien
         bcs_T=update_bc(t,"heat_transfers")
       #Update the materials properties
       if solve_diffusion_coefficient_temperature_dependent==True and solve_heat_transfer==True and solve_diffusion==True:
-        update_D(mesh,volume_marker,D,T)
+        D=update_D(mesh,volume_marker,D,T)
+      
+      flux_1 = -assemble(dot(2e-6*grad(c), n0)*ds(1))#+assemble(dot(grad(c), n0)*ds(2))+assemble(dot(grad(c), n0)*ds(3))+assemble(dot(grad(c), n0)*ds(4))+assemble(dot(grad(c), n0)*ds(5))+assemble(dot(grad(c), n0)*ds(6))
+      off_gassing.append([flux_1,t/365/24/3600])
+      with open("off-gassing30degC.csv", "w") as output:
+        writer = csv.writer(output, lineterminator='\n')
+        writer.writerow('ct')
+        for val in off_gassing:
+          writer.writerows([val])
     
     return
 
@@ -421,7 +427,7 @@ if __name__=="__main__":
 
     FT,q=define_variational_problem_heat_transfer(solve_heat_transfer,V,data)
 
-    time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,F,f,bcs_c,FT,q,bcs_T)
+    time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,F,f,bcs_c,FT,q,bcs_T,ds)
 
 
 

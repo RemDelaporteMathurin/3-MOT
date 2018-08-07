@@ -42,7 +42,7 @@
           "robin":[
           ]
         },
-        "initial_value":293.15, 
+        "initial_value":303.15, 
         "source_term":0 
       },
 
@@ -55,13 +55,13 @@
           "dc":[
             {
               "surface":[31,32,33,34,35,36],
-              "value":"1*exp(-t*log(2)/(12.3*365.25*24*3600))"
+              "value":"exp(-t*log(2)/(12.3*365.25*24*3600))"
             }
           ],
           "robin":[
             {
               "surface":[1,2,3,4,5,6],
-              "value":"conditional(gt(c_n, 0), k*(c_n)**0.74, Constant(0.0))"
+              "value":"conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))"
             }
           ]
         },
@@ -73,8 +73,8 @@
     
   },
   "solving_parameters":{
-    "final_time":1.9e9, 
-    "number_of_time_steps":50
+    "final_time":2e9, 
+    "number_of_time_steps":100
   }
 
 }

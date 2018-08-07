@@ -1,7 +1,7 @@
 {
     "quality" : "5",
 
-    "mesh_file" : "mesh_and_markers_breeder_blankets2.xdmf",
+    "mesh_file" : "mesh_and_markers_breeder_blankets_m.xdmf",
 
     "field_file" : "field.xdmf",
 
@@ -9,11 +9,11 @@
       "step_files":["geometry_files/breeder_blanket/slice_armour_mod1.step","geometry_files/breeder_blanket/slice_back_helium_mod1.step","geometry_files/breeder_blanket/slice_back_lithium_lead_mod1.step","geometry_files/breeder_blanket/slice_back_plate_1_mod1.step","geometry_files/breeder_blanket/slice_back_plate_2_mod1.step","geometry_files/breeder_blanket/slice_back_plate_3_mod1.step","geometry_files/breeder_blanket/slice_cooling_plate_coolant_mod1.step","geometry_files/breeder_blanket/slice_cooling_plate_material_mod1.step","geometry_files/breeder_blanket/slice_first_wall_coolant_mod1.step","geometry_files/breeder_blanket/slice_first_wall_material_mod1.step","geometry_files/breeder_blanket/slice_lithium_lead_mod1.step"],
       "materials":[
         {
-          "volume":[3],
+          "volume":[2],
           "material":"lithium_lead"
         },
         {
-          "volume":[2],
+          "volume":[3],
           "material":"eurofer"
         },
         {
