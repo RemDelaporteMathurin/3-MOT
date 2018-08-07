@@ -50,7 +50,7 @@ print('Getting the databases')
 #xdmf_encoding = XDMFFile.Encoding.HDF5
 
 
-MOT_parameters='MOT_parameters_RCB.json'
+MOT_parameters='MOT_parameters_breeder_blankets.json'
 with open(MOT_parameters) as f:
     data = json.load(f)
 data=byteify(data)
@@ -73,7 +73,7 @@ if data['physics']['solve_with_decay']==1:
 else:
   solve_with_decay=False
 
-calculate_off_gassing=True
+calculate_off_gassing=False
 
 
 

@@ -1,23 +1,24 @@
 {
     "quality" : "5",
-
+    "scaling" : "1",
     "mesh_file" : "mesh_and_markers_breeder_blankets_m.xdmf",
 
+    "output_file" : "solution.pvd",
     "field_file" : "field.xdmf",
 
     "structure_and_materials": {
       "step_files":["geometry_files/breeder_blanket/slice_armour_mod1.step","geometry_files/breeder_blanket/slice_back_helium_mod1.step","geometry_files/breeder_blanket/slice_back_lithium_lead_mod1.step","geometry_files/breeder_blanket/slice_back_plate_1_mod1.step","geometry_files/breeder_blanket/slice_back_plate_2_mod1.step","geometry_files/breeder_blanket/slice_back_plate_3_mod1.step","geometry_files/breeder_blanket/slice_cooling_plate_coolant_mod1.step","geometry_files/breeder_blanket/slice_cooling_plate_material_mod1.step","geometry_files/breeder_blanket/slice_first_wall_coolant_mod1.step","geometry_files/breeder_blanket/slice_first_wall_material_mod1.step","geometry_files/breeder_blanket/slice_lithium_lead_mod1.step"],
       "materials":[
         {
-          "volume":[2],
+          "volumes":[2],
           "material":"lithium_lead"
         },
         {
-          "volume":[3],
+          "volumes":[3],
           "material":"eurofer"
         },
         {
-          "volume":[1],
+          "volumes":[1],
           "material":"tungsten"
         }
       ]

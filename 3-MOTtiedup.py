@@ -15,7 +15,7 @@ import inspect
 
 
 def get_apreprovars(apreprovars):
-    return 'MOT_parameters_RCB.json'
+    return 'MOT_parameters_breeder_blankets.json'
 
 def byteify(input):
     if isinstance(input, dict):
@@ -150,6 +150,8 @@ def define_BC_diffusion(data,solve_diffusion,V,surface_marker,ds):
     return bcs_c,Neumann_BC_c_diffusion,Robin_BC_c_diffusion
 
 def define_BC_heat_transfer(data,solve_heat_transfer,V,surface_marker,ds):
+    print('Defining BC heat transfer')
+    print(solve_heat_transfer)
     ##Temperature
     bcs_T=list()
     Neumann_BC_T_diffusion=[]
@@ -192,8 +194,7 @@ def define_BC_heat_transfer(data,solve_heat_transfer,V,surface_marker,ds):
           Robin_BC_T_diffusion.append([ds(Robin['surface']),Robin['hc_coeff'],Robin['t_amb']])
     
       #print(Neumann_BC_T_diffusion)
-      return bcs_T,Neumann_BC_T_diffusion,Robin_BC_T_diffusion
-    return
+    return bcs_T,Neumann_BC_T_diffusion,Robin_BC_T_diffusion
 
 def get_volume_markers(mesh):
     #read in the volume markers
@@ -389,13 +390,13 @@ def time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficien
       if solve_diffusion_coefficient_temperature_dependent==True and solve_heat_transfer==True and solve_diffusion==True:
         D=update_D(mesh,volume_marker,D,T)
       
-      flux_1 = -assemble(dot(2e-6*grad(c), n0)*ds(1))#+assemble(dot(grad(c), n0)*ds(2))+assemble(dot(grad(c), n0)*ds(3))+assemble(dot(grad(c), n0)*ds(4))+assemble(dot(grad(c), n0)*ds(5))+assemble(dot(grad(c), n0)*ds(6))
-      off_gassing.append([flux_1,t/365/24/3600])
-      with open("off-gassing30degC.csv", "w") as output:
-        writer = csv.writer(output, lineterminator='\n')
-        writer.writerow('ct')
-        for val in off_gassing:
-          writer.writerows([val])
+      #flux_1 = -assemble(dot(2e-6*grad(c), n0)*ds(1))#+assemble(dot(grad(c), n0)*ds(2))+assemble(dot(grad(c), n0)*ds(3))+assemble(dot(grad(c), n0)*ds(4))+assemble(dot(grad(c), n0)*ds(5))+assemble(dot(grad(c), n0)*ds(6))
+      #off_gassing.append([flux_1,t/365/24/3600])
+      #with open("off-gassing30degC.csv", "w") as output:
+      #  writer = csv.writer(output, lineterminator='\n')
+      #  writer.writerow('ct')
+      #  for val in off_gassing:
+      #    writer.writerows([val])
     
     return
 
@@ -416,7 +417,7 @@ if __name__=="__main__":
 
     bcs_c, Neumann_BC_c_diffusion,Robin_BC_c_diffusion=define_BC_diffusion(data,solve_diffusion,V,surface_marker,ds)
 
-    bcs_T, Neumann_BC_T_diffusion,Robin_BC_T_diffusion=define_BC_heat_transfer(data,solve_diffusion,V,surface_marker,ds)
+    bcs_T, Neumann_BC_T_diffusion,Robin_BC_T_diffusion=define_BC_heat_transfer(data,solve_heat_transfer,V,surface_marker,ds)
 
     volume_marker, dx=get_volume_markers(mesh)
 
