@@ -216,8 +216,8 @@ def calculate_D(T,material_id):
   elif material_id=="steel": #steel
     return 7.3e-7*np.exp(-6.3e3/T)#1e-16#2e-6
   else:
-    print("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
-    return sys.exit(0)
+    raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
+
 def calculate_thermal_conductivity(T,material_id):
   R=8.314 #Perfect gas constant
   if material_id=="concrete":
@@ -229,8 +229,8 @@ def calculate_thermal_conductivity(T,material_id):
   elif material_id=="eurofer":
     return 29
   else:
-    print("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
-    return sys.exit(0)
+    raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
+
 def calculate_specific_heat(T,material_id):
   R=8.314 #Perfect gas constant
   if material_id=="concrete":
@@ -242,8 +242,8 @@ def calculate_specific_heat(T,material_id):
   elif material_id=="eurofer":
     return 675
   else:
-    print("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
-    return sys.exit(0)
+    raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
+
 def calculate_density(T,material_id):
 
   R=8.314 #Perfect gas constant
@@ -256,8 +256,7 @@ def calculate_density(T,material_id):
   elif material_id=="eurofer":
     return 7625
   else:
-    print("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
-    return sys.exit(0)
+    raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
 
 def which_material_is_it(volume_id,data):
   for material in data["structure_and_materials"]["materials"]:
@@ -325,16 +324,16 @@ def define_variational_problem_heat_transfer(solve_heat_transfer,V,data):
     return False,False
 
 def update_D(mesh,volume_marker,D,T):
-  for cell in cells(mesh):
-    cell_no=cell.index()
-    material_id=volume_marker.array()[cell_no]
-    Ta=0
-    for i in range(0,12,3):
-      Ta+=T(cell.get_vertex_coordinates()[i],cell.get_vertex_coordinates()[i+1],cell.get_vertex_coordinates()[i+2])
-    Ta=Ta/4
-    D_value = calculate_D(Ta,material_id)
-    D.vector()[cell_no] = D_value #Assigning for each cell the corresponding diffusion coeff
-  return D
+    for cell in cells(mesh):
+      cell_no=cell.index()
+      material_id=volume_marker.array()[cell_no]
+      Ta=0
+      for i in range(0,12,3):
+        Ta+=T(cell.get_vertex_coordinates()[i],cell.get_vertex_coordinates()[i+1],cell.get_vertex_coordinates()[i+2])
+      Ta=Ta/4
+      D_value = calculate_D(Ta,material_id)
+      D.vector()[cell_no] = D_value #Assigning for each cell the corresponding diffusion coeff
+
 def update_bc(t,physic):
   bcs=list()
   for DC in data['physics'][physic]['boundary_conditions']['dc']:
@@ -404,25 +403,25 @@ if __name__=="__main__":
     apreprovars=get_apreprovars(2)
     data=get_databases(apreprovars) #This returns an object data=json.load()
     solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,solve_with_decay=get_solvers(data) #Gets the solvers
-    
-    Time,num_steps,dt=get_solving_parameters(data) #Gets the parameters (final time, time steps...)
-    
-    mesh,xdmf_in=define_mesh(data)
-    
-    V,V0=define_functionspaces(data)
-    
-    c_n,T_n=define_initial_values(solve_heat_transfer,solve_diffusion,data,V)
-    
-    surface_marker,ds=get_surface_marker(mesh,xdmf_in)
-    
-    bcs_c,Neumann_BC_c_diffusion,Robin_BC_c_diffusion=define_BC_diffusion(data,solve_diffusion,V,surface_marker,ds)
 
-    bcs_T,Neumann_BC_T_diffusion,Robin_BC_T_diffusion=define_BC_heat_transfer(data,solve_diffusion,V,surface_marker,ds)
-    
-    volume_marker,dx=get_volume_markers(mesh)
-    
+    Time, num_steps,dt=get_solving_parameters(data) #Gets the parameters (final time, time steps...)
+
+    mesh, xdmf_in=define_mesh(data)
+
+    V, V0=define_functionspaces(data)
+
+    c_n, T_n=define_initial_values(solve_heat_transfer,solve_diffusion,data,V)
+
+    surface_marker, ds=get_surface_marker(mesh,xdmf_in)
+
+    bcs_c, Neumann_BC_c_diffusion,Robin_BC_c_diffusion=define_BC_diffusion(data,solve_diffusion,V,surface_marker,ds)
+
+    bcs_T, Neumann_BC_T_diffusion,Robin_BC_T_diffusion=define_BC_heat_transfer(data,solve_diffusion,V,surface_marker,ds)
+
+    volume_marker, dx=get_volume_markers(mesh)
+
     D,thermal_conductivity,specific_heat,density=define_materials_properties(V0,data,volume_marker)
-    
+
     F,f=define_variational_problem_diffusion(solve_diffusion,solve_with_decay,V,data)
 
     FT,q=define_variational_problem_heat_transfer(solve_heat_transfer,V,data)
