@@ -1,0 +1,103 @@
+{
+    "quality" : "10",
+    "scaling" : "0.001",
+    "mesh_file" : "mesh_and_markers_breeder_blankets.xdmf",
+
+    "output_file" : "solution.pvd",
+    "field_file" : "field.xdmf",
+
+    "structure_and_materials": {
+      "step_files":["geometry_files/breeder_blanket/slice_armour_mod1.step",
+        "geometry_files/breeder_blanket/slice_back_lithium_lead_mod1.step",
+        "geometry_files/breeder_blanket/slice_back_plate_1_mod1.step",
+        "geometry_files/breeder_blanket/slice_back_plate_2_mod1.step",
+        "geometry_files/breeder_blanket/slice_back_plate_3_mod1.step",
+        "geometry_files/breeder_blanket/slice_cooling_plate_material_mod1.step",
+        "geometry_files/breeder_blanket/slice_first_wall_material_mod1.step",
+        "geometry_files/breeder_blanket/slice_lithium_lead_mod1.step"],
+      "materials":[
+        {
+          "volumes":[2,28,29],
+          "material":"lithium_lead"
+        },
+        {
+          "volumes":[3,4,5,6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,23,24,25,26,27],
+          "material":"eurofer"
+        },
+        {
+          "volumes":[1],
+          "material":"tungsten"
+        }
+      ]
+    },
+
+   "physics": {
+      "solve_with_decay":1,
+      "solve_tritium_diffusion":0,
+      "solve_heat_transfer":1,
+      "diffusion_coeff_temperature_dependent":0,
+      "calculate_off_gassing":0,
+      "heat_transfers":{
+        "boundary_conditions":{
+          "neumann":[
+            {
+              "surface":[1,4,7],
+              "value":"0.5e6"
+            }
+              ],
+          "dc":[
+          ],
+          "robin":[
+            {
+              "surface":[322, 75, 324, 63, 326, 82, 328, 85, 84, 83, 69, 68, 67, 66, 336, 89, 338, 73, 340, 94, 342, 97, 96, 95, 77, 81, 80, 79, 350, 101, 352, 87, 354, 106, 356, 107, 91, 93, 360, 111, 362, 99, 364, 116, 366, 117, 103, 105, 370, 121, 372, 109, 374, 126, 376, 127, 113, 115, 380, 131, 382, 119, 384, 136, 386, 137, 123, 125, 390, 141, 392, 129, 394, 146, 396, 147, 133, 135, 400, 151, 402, 139, 404, 156, 406, 157, 143, 145, 410, 161, 412, 149, 414, 166, 416, 167, 153, 155, 420, 171, 422, 159, 424, 176, 426, 177, 163, 165, 430, 181, 432, 169, 434, 186, 436, 187, 173, 175, 440, 191, 442, 179, 444, 196, 446, 197, 183, 185, 450, 201, 452, 189, 454, 206, 456, 207, 193, 195, 460, 37, 462, 199, 464, 38, 466, 39, 203, 205],
+              "hc_coeff":4848.2,
+              "t_amb":723.15
+            },
+            {
+              "surface":[221, 295, 296, 298, 299, 300, 301, 302, 303, 305, 306, 222, 235, 309, 310, 312, 313, 314, 315, 316, 317, 319, 320, 236],
+              "hc_coeff":4531.2,
+              "t_amb":623.15
+            }
+          ]
+        },
+        "initial_value":0.1, 
+        "source_term":0 
+      },
+      "tritium_diffusion":{
+        "boundary_conditions":{
+          "neumann":[
+              ],
+          "dc":[
+          ],
+          "robin":[
+          ]
+        },
+        "initial_value":0, 
+        "source_term":0 
+      }
+  },
+  "solving_parameters":{
+    "study":"steady_state",
+    "final_time":36000000000.0, 
+    "number_of_time_steps":20 
+  },
+
+  "post_processing":{
+    "heat_transfers":{
+      "surface_flux":[322,221],
+      "volume_average":[1],
+      "volume_minimum":[],
+      "volume_maximum":[],
+      "custom":[],
+      "output_file":"post-processingHT.csv"
+    },
+    "tritium_diffusion":{
+      "surface_flux":[],
+      "volume_average":[],
+      "volume_minimum":[],
+      "volume_maximum":[],
+      "custom":[],
+      "output_file":"post-processing-tritium-diffusion.csv"
+    }
+  }
+}

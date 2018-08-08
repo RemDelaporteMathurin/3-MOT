@@ -1,0 +1,100 @@
+{
+    "quality" : "5",
+
+    "mesh_file" : "mesh_and_markers_RCB.xdmf",
+
+    "output_file" : "solution.pvd",
+
+
+    "structure_and_materials": {
+      "step_files":["geometry_files/rcb/concrete.stp","geometry_files/rcb/polymer.stp","geometry_files/rcb/steel.stp"],
+      "materials":[
+        {
+          "volumes":[1],
+          "material":"concrete"
+        },
+        {
+          "volumes":[2],
+          "material":"polymer"
+        },
+        {
+          "volumes":[3],
+          "material":"steel"
+        }
+      ]
+    },
+
+   "physics": {
+      "solve_with_decay":1,
+      "solve_tritium_diffusion":1,
+      "solve_heat_transfer":0,
+      "diffusion_coeff_temperature_dependent":0,
+      "calculate_off_gassing":1,
+
+
+
+      "heat_transfers":{
+        "boundary_conditions":{
+          "neumann":[
+              ],
+          "dc":[
+          ],
+          "robin":[
+          ]
+        },
+        "initial_value":293.15, 
+        "source_term":0 
+      },
+
+
+
+      "tritium_diffusion":{
+        "boundary_conditions":{
+          "neumann":[
+              ],
+          "dc":[
+            {
+              "surface":[31,32,33,34,35,36],
+              "value":"exp(-t*log(2)/(12.3*365.25*24*3600))"
+            }
+          ],
+          "robin":[
+            {
+              "surface":[1,2,3,4,5,6],
+              "value":"conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))"
+            }
+            
+          ]
+        },
+        "initial_value":0, 
+        "source_term":0 
+      }
+    
+
+    
+  },
+  "solving_parameters":{
+    "study":"transient",
+    "final_time":2e9, 
+    "number_of_time_steps":100
+  },
+  "post_processing":{
+    "heat_transfers":{
+      "surface_flux":[],
+      "volume_average":[],
+      "volume_minimum":[],
+      "volume_maximum":[],
+      "custom":[],
+      "output_file":"post-processingHT.csv"
+    },
+    "tritium_diffusion":{
+      "surface_flux":[31],
+      "volume_average":[1,2,3],
+      "volume_minimum":[],
+      "volume_maximum":[],
+      "custom":["assemble(solution*dx(3))"],
+      "output_file":"post-processing-tritium-diffusion.csv"
+    }
+  }
+
+}
