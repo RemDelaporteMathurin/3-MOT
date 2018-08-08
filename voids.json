@@ -1,0 +1,6 @@
+{
+  "void" : ["geometry_files/breeder_blanket/slice_first_wall_coolant_mod1.step",
+            "geometry_files/breeder_blanket/slice_cooling_plate_coolant_mod1.step",
+            "geometry_files/breeder_blanket/slice_back_helium_mod1.step"]
+
+}
