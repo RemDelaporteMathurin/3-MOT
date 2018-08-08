@@ -1,7 +1,7 @@
 {
-    "quality" : "5",
-    "scaling" : "1",
-    "mesh_file" : "mesh_and_markers_breeder_blankets_m.xdmf",
+    "quality" : "10",
+    "scaling" : "0.001",
+    "mesh_file" : "mesh_and_markers_breeder_blankets.xdmf",
 
     "output_file" : "solution.pvd",
     "field_file" : "field.xdmf",
