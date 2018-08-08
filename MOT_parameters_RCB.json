@@ -74,6 +74,7 @@
     
   },
   "solving_parameters":{
+    "study":"transient",
     "final_time":2e9, 
     "number_of_time_steps":100
   },

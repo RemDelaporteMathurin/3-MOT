@@ -42,7 +42,7 @@
           "neumann":[
             {
               "surface":[1,4,7],
-              "value":"0.5e6*t"
+              "value":"0.5e6"
             }
               ],
           "dc":[
@@ -77,14 +77,15 @@
       }
   },
   "solving_parameters":{
+    "study":"steady_state",
     "final_time":36000000000.0, 
     "number_of_time_steps":20 
   },
 
   "post_processing":{
     "heat_transfers":{
-      "surface_flux":[],
-      "volume_average":[],
+      "surface_flux":[322,221],
+      "volume_average":[1],
       "volume_minimum":[],
       "volume_maximum":[],
       "custom":[],

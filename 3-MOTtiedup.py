@@ -37,6 +37,11 @@ def get_databases(name_database):
 
 def get_solvers(data):
     print('Getting the solvers')
+    if data['solving_parameters']['study']=="steady_state":
+      solve_transient=False
+    else:
+      if data['solving_parameters']['study']=='transient':
+        solve_transient=True
     if data['physics']['solve_heat_transfer']==1:
         solve_heat_transfer=True
     else:
@@ -54,13 +59,17 @@ def get_solvers(data):
     else:
         solve_with_decay=False
     calculate_off_gassing=True
-    return solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,solve_with_decay
+    return solve_transient,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,solve_with_decay
 
 def get_solving_parameters(data):
     print('Getting the solving parameters')
-    Time = float(data["solving_parameters"]['final_time'])  #60000*365.25*24*3600.0# final time 
-    num_steps = data['solving_parameters']['number_of_time_steps'] # number of time steps
-    dt = Time / num_steps # time step size
+    Time=0
+    num_steps=0
+    dt=0
+    if solve_transient==True:
+      Time = float(data["solving_parameters"]['final_time'])  #60000*365.25*24*3600.0# final time 
+      num_steps = data['solving_parameters']['number_of_time_steps'] # number of time steps
+      dt = Time / num_steps # time step size
     return Time,num_steps,dt
 
 def define_mesh(data):
@@ -295,7 +304,7 @@ def define_materials_properties(V0,data,volume_marker):
       #print(D.vector()[cell_no])
     return D,thermal_conductivity,specific_heat,density
 
-def define_variational_problem_diffusion(solve_diffusion,solve_with_decay,V,data):
+def define_variational_problem_diffusion(solve_diffusion,solve_transient,solve_with_decay,V,data):
     if solve_diffusion==True:
         print('Defining variation problem tritium diffusion')
         c = TrialFunction(V)#c is the tritium concentration
@@ -306,7 +315,12 @@ def define_variational_problem_diffusion(solve_diffusion,solve_with_decay,V,data
             decay=0
     
         f = Expression(str(data['physics']['tritium_diffusion']['source_term']),t=0,degree=2)#This is the tritium volumetric source term 
-        F=((c-c_n)/dt)*vc*dx + D*dot(grad(c), grad(vc))*dx + (-f+decay*c)*vc*dx 
+        if solve_transient==True:
+          F=((c-c_n)/dt)*vc*dx
+        else:
+          F=0
+        
+        F+= D*dot(grad(c), grad(vc))*dx + (-f+decay*c)*vc*dx 
         for Neumann in Neumann_BC_c_diffusion:
             F += vc * Neumann[1]*Neumann[0] 
         for Robin in Robin_BC_c_diffusion:
@@ -314,15 +328,18 @@ def define_variational_problem_diffusion(solve_diffusion,solve_with_decay,V,data
         return F,f
     return False,False
     
-def define_variational_problem_heat_transfer(solve_heat_transfer,V,data):
+def define_variational_problem_heat_transfer(solve_heat_transfer,solve_transient,V,data):
     
     if solve_heat_transfer==True:
         print('Defining variation problem heat transfer')
         T = TrialFunction(V) #T is the temperature
         vT = TestFunction(V)
         q = Expression(str(data['physics']['heat_transfers']['source_term']),t=0,degree=2) #q is the volumetric heat source term
-
-        FT = specific_heat*density*((T-T_n)/dt)*vT*dx +thermal_conductivity*dot(grad(T), grad(vT))*dx - q*vT*dx #This is the heat transfer equation         
+        if solve_transient==True:
+          FT=specific_heat*density*((T-T_n)/dt)*vT*dx
+        else:
+          FT=0
+        FT +=  thermal_conductivity*dot(grad(T), grad(vT))*dx - q*vT*dx #This is the heat transfer equation         
         for Neumann in Neumann_BC_T_diffusion:
             #print(Neumann)
             FT += - vT * Neumann[1]*Neumann[0]    
@@ -434,8 +451,7 @@ def initialise_post_processing(data,physic):
     header.append('Custom '+ str(i))
   return header
 
-
-def time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx):
+def time_stepping(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx,header_heat_transfers,header_tritium_diffusion,values_heat_transfers,values_tritium_diffusion):
     ### Time-stepping
     print('Time stepping')
     T = Function(V)
@@ -443,12 +459,8 @@ def time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficien
     off_gassing=list()
     output_file  = File(data["output_file"])
     t=0
-    values_heat_transfers=[]
-    values_tritium_diffusion=[]
-    if solve_heat_transfer==True:
-      header_heat_transfers=initialise_post_processing(data,"heat_transfers")
-    if solve_diffusion==True:
-      header_tritium_diffusion=initialise_post_processing(data,"tritium_diffusion")
+
+
 
 
     n0 = FacetNormal(mesh)
@@ -482,27 +494,40 @@ def time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficien
 
       #Update the materials properties
       if solve_diffusion_coefficient_temperature_dependent==True and solve_heat_transfer==True and solve_diffusion==True:
-        D=update_D(mesh,volume_marker,D,T)
-      
-
-
-      #flux_1 =-assemble(dot(2e-6*grad(c), n0)*ds(1))
-      #
-      ##assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(1))#assemble(c*ds(1))#+assemble(dot(grad(c), n0)*ds(2))+assemble(dot(grad(c), n0)*ds(3))+assemble(dot(grad(c), n0)*ds(4))+assemble(dot(grad(c), n0)*ds(5))+assemble(dot(grad(c), n0)*ds(6))
-      #off_gassing.append([flux_1,t/365/24/3600])
-      #with open("OG20degC.csv", "w") as output:
-      #  writer = csv.writer(output, lineterminator='\n')
-      #  writer.writerow('ct')
-      #  for val in off_gassing:
-      #    writer.writerows([val])
-    
+        D=update_D(mesh,volume_marker,D,T)   
     return
 
+def solving(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx):
+  values_heat_transfers=[]
+  values_tritium_diffusion=[]
+  header_heat_transfers=''
+  header_tritium_diffusion=''
+  if solve_heat_transfer==True:
+    header_heat_transfers=initialise_post_processing(data,"heat_transfers")
+  if solve_diffusion==True:
+    header_tritium_diffusion=initialise_post_processing(data,"tritium_diffusion")
+  
+  if solve_transient==True:
+    time_stepping(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx,header_heat_transfers,header_tritium_diffusion,values_heat_transfers,values_tritium_diffusion)
+  else:
+    output_file  = File(data["output_file"])
+    if solve_heat_transfer==True:
+      T=Function(V)
+      solve(lhs(FT)==rhs(FT), T, bcs_T)
+      output_file << (T,0.0)
+      post_processing(data,T,"heat_transfers",header_heat_transfers,values_heat_transfers,0,ds,dx,thermal_conductivity,n0)
+    if solve_diffusion==True:
+      c=Function(V)
+      solve(lhs(F)==rhs(F),c,bcs_c)
+      output_file << (c,0.0)
+      post_processing(data,T,"tritium_diffusion",header_tritium_diffusion,values_tritium_diffusion,0,ds,dx,D,n0)
+
+      
 
 if __name__=="__main__":
     apreprovars=get_apreprovars(2)
     data=get_databases(apreprovars) #This returns an object data=json.load()
-    solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,solve_with_decay=get_solvers(data) #Gets the solvers
+    solve_transient,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,solve_with_decay=get_solvers(data) #Gets the solvers
 
     Time, num_steps,dt=get_solving_parameters(data) #Gets the parameters (final time, time steps...)
 
@@ -522,8 +547,8 @@ if __name__=="__main__":
 
     D,thermal_conductivity,specific_heat,density=define_materials_properties(V0,data,volume_marker)
 
-    F,f=define_variational_problem_diffusion(solve_diffusion,solve_with_decay,V,data)
+    F,f=define_variational_problem_diffusion(solve_diffusion,solve_transient,solve_with_decay,V,data)
 
-    FT,q=define_variational_problem_heat_transfer(solve_heat_transfer,V,data)
+    FT,q=define_variational_problem_heat_transfer(solve_heat_transfer,solve_transient,V,data)
 
-    time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx)
+    solving(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx)
