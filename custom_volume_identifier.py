@@ -6,7 +6,7 @@ import json
 import xml.etree.ElementTree as ET
 
 # run this script with the following commands
-# trelis -nographics -batch custom_volume_identifier.py "json_input='MOT_parameters_breeder_blankets.sjon'" 
+# trelis -nographics -batch custom_volume_identifier.py "json_input='MOT_parameters_breeder_blankets.json'" 
 # trelis custom_volume_identifier.py "json_input='MOT_parameters_breeder_blankets.json'"
 
 startTime = datetime.now()

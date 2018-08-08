@@ -3,10 +3,8 @@ from pprint import pprint
 import ast
 
 # run this script with the following commands
-# trelis -nographics -batch make_xdmf_mesh_with_trelis.py "quality='10'" "outputfile='mesh_and_markers.xdmf'" "structure='slice_armour_mod1.step,slice_back_lithium_lead_mod1.step,slice_back_plate_1_mod1.step,slice_back_plate_2_mod1.step,slice_back_plate_3_mod1.step,slice_cooling_plate_material_mod1.step,slice_first_wall_material_mod1.step,slice_lithium_lead_mod1.step,'" "coolant='slice_first_wall_coolant_mod1.step,slice_cooling_plate_coolant_mod1.step,slice_back_helium_mod1.step'"
-# trelis make_xdmf_mesh_with_trelis.py "quality='10'" "outputfile='mesh_and_markers.xdmf'" "structure='slice_armour_mod1.step,slice_back_lithium_lead_mod1.step,slice_back_plate_1_mod1.step,slice_back_plate_2_mod1.step,slice_back_plate_3_mod1.step,slice_cooling_plate_material_mod1.step,slice_first_wall_material_mod1.step,slice_lithium_lead_mod1.step,'" "coolant='slice_first_wall_coolant_mod1.step,slice_cooling_plate_coolant_mod1.step,slice_back_helium_mod1.step'"
-
-# trelis make_xdmf_mesh_with_trelis.py "json_input='name_of_the_json_file'"
+# trelis -nographics -batch make_xdmf_mesh_with_trelis.py "json_input='MOT_parameters_breeder_blankets.json'"
+# trelis make_xdmf_mesh_with_trelis.py "json_input='MOT_parameters_breeder_blankets.json'"
 
 def byteify(input):
     if isinstance(input, dict):
@@ -19,24 +17,7 @@ def byteify(input):
     else:
         return input
 
-def read_arguments_from_json_file(aprepro_vars):
-  print('reading arguments from json file')
-  json_input = str(cubit.get_aprepro_value_as_string("json_input"))
-  print('json_inputfile ='+str(json_input))
-  with open(json_input) as f:
-    data = json.load(f)
-  data=byteify(data)
-  pprint(data)
-  quality= data["quality"]
-  outputfile = data["mesh_file"]
-  structure_and_materials=data["structure_and_materials"]
-  structure_step_files=[]
-  materials=[]
-  material_ids=[]
-  for entry in structure_and_materials["step_files"]:
-    structure_step_files.append(entry)
-    print(entry)
-  return quality, outputfile, structure_step_files
+
 
 def find_external_surfaces():
   print('looking for merged surfaces')
@@ -67,20 +48,24 @@ def mesh_and_remesh_till_done(quality):
 
 aprepro_vars = cubit.get_aprepro_vars()
 
-print("Found the following aprepro variables:")
-print(aprepro_vars)
-for var_name in aprepro_vars:
-  val = cubit.get_aprepro_value_as_string(var_name)
-  print("{0} = {1}".format(var_name, val))
-
-quality, outputfile, structure_step_files=read_arguments_from_json_file(aprepro_vars)
-
+if "json_input" in aprepro_vars:
+    json_input = str(cubit.get_aprepro_value_as_string("json_input"))
+    with open(json_input) as f:
+        data = json.load(f)
+    data = byteify(data)
+else:
+    print('provide a json_input file')
+    sys.exit()
 
 cubit.cmd('reset')
 
-for volume in structure_step_files:
-  cubit.cmd('import step "'+volume+'" heal')
+print(data['structure_and_materials']['step_files'])
 
+for step_file in data['structure_and_materials']['step_files']:
+    print('loading step file ', step_file)
+    cubit.cmd('import step "' + step_file + '" heal')
+
+cubit.cmd('vol all scale ' + str(data['scaling']))
 cubit.cmd('imprint body all')
 cubit.cmd('merge tolerance 1.e-6')
 cubit.cmd('merge all')
@@ -88,7 +73,7 @@ cubit.cmd('merge all')
 
 list_of_external_surfaces = find_external_surfaces()
 
-mesh_and_remesh_till_done(quality)
+mesh_and_remesh_till_done(data['quality'])
 
 nodes_in_volumes = sorted(cubit.parse_cubit_list("node"," in volume all "))
 nodal_coordinates_list = []
@@ -103,7 +88,7 @@ for tet_id in tets_in_volumes:
     nodes_in_tets = cubit.parse_cubit_list("node"," in tet "+str(tet_id))
     nodes_in_tets_list.append(nodes_in_tets)
 
-f = open(outputfile, 'w') 
+f = open(data["mesh_file"], 'w') 
 
 f.write('<?xml version="1.0"?>')
 f.write('<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>\n')
