@@ -10,15 +10,15 @@
       "step_files":["geometry_files/rcb/concrete.stp","geometry_files/rcb/polymer.stp","geometry_files/rcb/steel.stp"],
       "materials":[
         {
-          "volumes":[1,2,3],
+          "volumes":[1],
           "material":"concrete"
         },
         {
-          "volumes":[],
+          "volumes":[2],
           "material":"polymer"
         },
         {
-          "volumes":[],
+          "volumes":[3],
           "material":"steel"
         }
       ]
@@ -51,26 +51,22 @@
       "tritium_diffusion":{
         "boundary_conditions":{
           "neumann":[
-            {
-              "surface":[1,2,3,4,5,6],
-              "value":"t<12.3*365.25*24*3600?0:1"
-            }
               ],
           "dc":[
             {
-              "surface":[],
+              "surface":[31,32,33,34,35,36],
               "value":"exp(-t*log(2)/(12.3*365.25*24*3600))"
             }
           ],
           "robin":[
             {
-              "surface":[],
+              "surface":[1,2,3,4,5,6],
               "value":"conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))"
             }
             
           ]
         },
-        "initial_value":3, 
+        "initial_value":0, 
         "source_term":0 
       }
     
@@ -80,6 +76,24 @@
   "solving_parameters":{
     "final_time":2e9, 
     "number_of_time_steps":100
+  },
+  "post_processing":{
+    "heat_transfers":{
+      "surface_flux":[],
+      "volume_average":[],
+      "volume_minimum":[],
+      "volume_maximum":[],
+      "custom":[],
+      "output_file":"post-processingHT.csv"
+    },
+    "tritium_diffusion":{
+      "surface_flux":[31],
+      "volume_average":[1,2,3],
+      "volume_minimum":[],
+      "volume_maximum":[],
+      "custom":["assemble(solution*dx(3))"],
+      "output_file":"post-processing-tritium-diffusion.csv"
+    }
   }
 
 }

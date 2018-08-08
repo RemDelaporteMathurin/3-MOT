@@ -368,7 +368,74 @@ def update_bc(t,physic):
       #print(bci_T)
   return bcs
 
-def time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,F,f,bcs_c,FT,q,bcs_T,ds):
+
+
+def calculate_flux(surface,ds,solution,property,n0):
+  flux=assemble(-property*dot(grad(solution),n0)*ds(surface))
+
+  return flux
+def calculate_average_volume(volume,dx,solution,property):
+  average=assemble(solution*dx(volume))/assemble(1*dx(volume))
+  return average
+def calculate_minimum_volume(volume,dx,physic,solution,property):
+  minimum=solution.vector().min()
+  #minimum=assemble(min(solution)*dx(volume))
+  print(minimum)
+  return minimum
+def calculate_maximum_volume(volume,dx,physic,solution,property):
+  return volume
+def write_in_file(header,values,output_file):
+
+  with open(output_file,"w") as output:
+    writer = csv.writer(output, lineterminator='\n')
+    writer.writerows([header])
+
+    #writer.writerow('t')
+    for val in values:
+      writer.writerows([val])
+    return
+
+def post_processing(data,solution,physic,header,values,t,ds,dx,property,n0):
+
+  output_file=data["post_processing"][physic]["output_file"]
+  tab=[]
+  tab.append(t)
+  for surface in data["post_processing"][physic]["surface_flux"]:
+    tab.append(calculate_flux(surface,ds,solution,property,n0))
+  for volume in data["post_processing"][physic]["volume_average"]:
+    tab.append(calculate_average_volume(volume,dx,solution,property))
+  for volume in data["post_processing"][physic]["volume_minimum"]:
+    tab.append(calculate_minimum_volume(volume,dx,physic,solution,property))
+  for volume in data["post_processing"][physic]["volume_maximum"]:
+    tab.append(calculate_maximum_volume(volume,dx,physic,solution,property))  
+  for expression in data["post_processing"][physic]["custom"]:
+    tab.append(eval(expression))  
+  values.append(tab)
+
+  
+  write_in_file(header,values,output_file)
+  return
+
+
+def initialise_post_processing(data,physic):
+  output_file=data["post_processing"][physic]["output_file"]
+  header=['t(s)']
+  i=0
+  for surface in data["post_processing"][physic]["surface_flux"]:
+    header.append('Flux through surface '+str(surface))
+  for volume in data["post_processing"][physic]["volume_average"]:
+    header.append('Average volume '+str(volume))
+  for volume in data["post_processing"][physic]["volume_minimum"]:
+    header.append('Minimum volume '+str(volume))
+  for volume in data["post_processing"][physic]["volume_maximum"]:
+    header.append('Maximum volume '+str(volume))
+  for expression in data["post_processing"][physic]["custom"]:
+    i+=1
+    header.append('Custom '+ str(i))
+  return header
+
+
+def time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx):
     ### Time-stepping
     print('Time stepping')
     T = Function(V)
@@ -376,6 +443,13 @@ def time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficien
     off_gassing=list()
     output_file  = File(data["output_file"])
     t=0
+    values_heat_transfers=[]
+    values_tritium_diffusion=[]
+    if solve_heat_transfer==True:
+      header_heat_transfers=initialise_post_processing(data,"heat_transfers")
+    if solve_diffusion==True:
+      header_tritium_diffusion=initialise_post_processing(data,"tritium_diffusion")
+
 
     n0 = FacetNormal(mesh)
     for n in range(num_steps):
@@ -395,6 +469,8 @@ def time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficien
         output_file << (c,t)
         c_n.assign(c)
         bcs_c=update_bc(t,"tritium_diffusion")
+        post_processing(data,c,"tritium_diffusion",header_tritium_diffusion,values_tritium_diffusion,t,ds,dx,D,n0)
+
       # Compute solution temperature
       if solve_heat_transfer==True:
         q.t += dt
@@ -402,21 +478,26 @@ def time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficien
         output_file << (T,t)
         T_n.assign(T)
         bcs_T=update_bc(t,"heat_transfers")
+        post_processing(data,T,"heat_transfers",header_heat_transfers,values_heat_transfers,t,ds,dx,thermal_conductivity,n0)
+
       #Update the materials properties
       if solve_diffusion_coefficient_temperature_dependent==True and solve_heat_transfer==True and solve_diffusion==True:
         D=update_D(mesh,volume_marker,D,T)
       
-      flux_1 =-assemble(dot(2e-6*grad(c), n0)*ds(1))
-      
-      #assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(1))#assemble(c*ds(1))#+assemble(dot(grad(c), n0)*ds(2))+assemble(dot(grad(c), n0)*ds(3))+assemble(dot(grad(c), n0)*ds(4))+assemble(dot(grad(c), n0)*ds(5))+assemble(dot(grad(c), n0)*ds(6))
-      off_gassing.append([flux_1,t/365/24/3600])
-      with open("OG20degC.csv", "w") as output:
-        writer = csv.writer(output, lineterminator='\n')
-        writer.writerow('ct')
-        for val in off_gassing:
-          writer.writerows([val])
+
+
+      #flux_1 =-assemble(dot(2e-6*grad(c), n0)*ds(1))
+      #
+      ##assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(1))#assemble(c*ds(1))#+assemble(dot(grad(c), n0)*ds(2))+assemble(dot(grad(c), n0)*ds(3))+assemble(dot(grad(c), n0)*ds(4))+assemble(dot(grad(c), n0)*ds(5))+assemble(dot(grad(c), n0)*ds(6))
+      #off_gassing.append([flux_1,t/365/24/3600])
+      #with open("OG20degC.csv", "w") as output:
+      #  writer = csv.writer(output, lineterminator='\n')
+      #  writer.writerow('ct')
+      #  for val in off_gassing:
+      #    writer.writerows([val])
     
     return
+
 
 if __name__=="__main__":
     apreprovars=get_apreprovars(2)
@@ -445,4 +526,4 @@ if __name__=="__main__":
 
     FT,q=define_variational_problem_heat_transfer(solve_heat_transfer,V,data)
 
-    time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,F,f,bcs_c,FT,q,bcs_T,ds)
+    time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx)
