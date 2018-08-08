@@ -35,7 +35,7 @@
           "neumann":[
             {
               "surface":[1,4,7],
-              "value":0.5e6
+              "value":"0.5e6*t"
             }
               ],
           "dc":[

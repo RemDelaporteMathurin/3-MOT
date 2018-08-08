@@ -10,15 +10,15 @@
       "step_files":["geometry_files/rcb/concrete.stp","geometry_files/rcb/polymer.stp","geometry_files/rcb/steel.stp"],
       "materials":[
         {
-          "volumes":[1],
+          "volumes":[1,2,3],
           "material":"concrete"
         },
         {
-          "volumes":[2],
+          "volumes":[],
           "material":"polymer"
         },
         {
-          "volumes":[3],
+          "volumes":[],
           "material":"steel"
         }
       ]
@@ -51,21 +51,26 @@
       "tritium_diffusion":{
         "boundary_conditions":{
           "neumann":[
+            {
+              "surface":[1,2,3,4,5,6],
+              "value":"t<12.3*365.25*24*3600?0:1"
+            }
               ],
           "dc":[
             {
-              "surface":[31,32,33,34,35,36],
+              "surface":[],
               "value":"exp(-t*log(2)/(12.3*365.25*24*3600))"
             }
           ],
           "robin":[
             {
-              "surface":[1,2,3,4,5,6],
+              "surface":[],
               "value":"conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))"
             }
+            
           ]
         },
-        "initial_value":0, 
+        "initial_value":3, 
         "source_term":0 
       }
     

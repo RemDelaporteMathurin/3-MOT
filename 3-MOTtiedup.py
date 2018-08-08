@@ -15,7 +15,8 @@ import inspect
 
 
 def get_apreprovars(apreprovars):
-    return 'MOT_parameters_breeder_blankets.json'
+    return 'MOT_parameters_RCB.json'
+    #return 'MOT_parameters_breeder_blankets.json'
 
 def byteify(input):
     if isinstance(input, dict):
@@ -134,7 +135,7 @@ def define_BC_diffusion(data,solve_diffusion,V,surface_marker,ds):
 
       #Neumann
       for Neumann in data['physics']['tritium_diffusion']['boundary_conditions']['neumann']:
-        value=Neumann['value']
+        value=Expression(Neumann['value'],t=0,degree=2)
         if type(Neumann['surface'])==list:
           for surface in Neumann['surface']:
             Neumann_BC_c_diffusion.append([ds(surface),value])
@@ -179,7 +180,7 @@ def define_BC_heat_transfer(data,solve_heat_transfer,V,surface_marker,ds):
 
       #Neumann
       for Neumann in data['physics']['heat_transfers']['boundary_conditions']['neumann']:
-        value=Neumann['value']
+        value=Expression(Neumann['value'],t=0,degree=2)
 
         if type(Neumann['surface'])==list:
           for surface in Neumann['surface']:
@@ -296,7 +297,7 @@ def define_materials_properties(V0,data,volume_marker):
 
 def define_variational_problem_diffusion(solve_diffusion,solve_with_decay,V,data):
     if solve_diffusion==True:
-      print('Defining variation problem tritium diffusion')
+        print('Defining variation problem tritium diffusion')
         c = TrialFunction(V)#c is the tritium concentration
         vc = TestFunction(V)
         if solve_with_decay==True:
@@ -342,6 +343,14 @@ def update_D(mesh,volume_marker,D,T):
       D.vector()[cell_no] = D_value #Assigning for each cell the corresponding diffusion coeff
 
 def update_bc(t,physic):
+  if physic=="tritium_diffusion":
+    for Neumann in Neumann_BC_c_diffusion:
+      Neumann[1].t=t
+  if physic=="heat_transfers":
+    for Neumann in Neumann_BC_T_diffusion:
+      Neumann[1].t=t
+
+
   bcs=list()
   for DC in data['physics'][physic]['boundary_conditions']['dc']:
     #value_DC=DC['value'] #todo make this value able to be an Expression (time or space dependent)
@@ -397,13 +406,15 @@ def time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficien
       if solve_diffusion_coefficient_temperature_dependent==True and solve_heat_transfer==True and solve_diffusion==True:
         D=update_D(mesh,volume_marker,D,T)
       
-      #flux_1 = -assemble(dot(2e-6*grad(c), n0)*ds(1))#+assemble(dot(grad(c), n0)*ds(2))+assemble(dot(grad(c), n0)*ds(3))+assemble(dot(grad(c), n0)*ds(4))+assemble(dot(grad(c), n0)*ds(5))+assemble(dot(grad(c), n0)*ds(6))
-      #off_gassing.append([flux_1,t/365/24/3600])
-      #with open("off-gassing30degC.csv", "w") as output:
-      #  writer = csv.writer(output, lineterminator='\n')
-      #  writer.writerow('ct')
-      #  for val in off_gassing:
-      #    writer.writerows([val])
+      flux_1 =-assemble(dot(2e-6*grad(c), n0)*ds(1))
+      
+      #assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(1))#assemble(c*ds(1))#+assemble(dot(grad(c), n0)*ds(2))+assemble(dot(grad(c), n0)*ds(3))+assemble(dot(grad(c), n0)*ds(4))+assemble(dot(grad(c), n0)*ds(5))+assemble(dot(grad(c), n0)*ds(6))
+      off_gassing.append([flux_1,t/365/24/3600])
+      with open("OG20degC.csv", "w") as output:
+        writer = csv.writer(output, lineterminator='\n')
+        writer.writerow('ct')
+        for val in off_gassing:
+          writer.writerows([val])
     
     return
 
@@ -435,19 +446,3 @@ if __name__=="__main__":
     FT,q=define_variational_problem_heat_transfer(solve_heat_transfer,V,data)
 
     time_stepping(solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,F,f,bcs_c,FT,q,bcs_T,ds)
-
-
-
-##Calculate off-gassing
-#if calculate_off_gassing==True:
-#  #g=conditional(gt(c_n, 0), k*(c_n)**0.74, Constant(0.0))
-#  g=Robin_BC_c_diffusion[0][1]
-#  off_gassing_per_day=3600*24*(assemble(g*ds(1))+assemble(g*ds(2))+assemble(g*ds(3))+assemble(g*ds(4))+assemble(g*ds(5))+assemble(g*ds(6))) #off-gassing in mol/day
-#  i=0
-#  print(off_gassing_per_day)
-#  off_gassing.append([off_gassing_per_day,t/3600/24/365]#
-#  with open(file_off_gassing, "w") as output:
-#    writer = csv.writer(output, lineterminator='\n')
-#    writer.writerow('ct')
-#    for val in off_gassing:
-#      writer.writerows([val]#
