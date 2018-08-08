@@ -15,8 +15,8 @@ import inspect
 
 
 def get_apreprovars(apreprovars):
-    return 'MOT_parameters_RCB.json'
-    #return 'MOT_parameters_breeder_blankets.json'
+    #return 'MOT_parameters_RCB.json'
+    return 'MOT_parameters_breeder_blankets.json'
 
 def byteify(input):
     if isinstance(input, dict):
@@ -83,7 +83,8 @@ def define_mesh(data):
 
     subdomains = MeshFunction("size_t", mesh, mesh.topology().dim())
     print('Number of cell is '+ str(len(subdomains.array())))
-    return mesh,xdmf_in
+    n0 = FacetNormal(mesh)
+    return mesh,xdmf_in,n0
 
 def define_functionspaces(data):
     print('Defining Functionspaces')
@@ -213,10 +214,8 @@ def get_volume_markers(mesh):
     print('Marking the volumes')
     #read in the volume markers
     volume_marker_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
-    xdmf_in.read(volume_marker_mvc, "volume_marker_material")
+    xdmf_in.read(volume_marker_mvc, "volume_marker_volume_id")
 
-    #volume_marker_mvc.rename("volume_marker_material", "volume_marker_material")
-    #xdmf_out.write(volume_marker_mvc, xdmf_encoding)
 
     volume_marker = MeshFunction("size_t", mesh, volume_marker_mvc)
     dx = Measure('dx', domain=mesh, subdomain_data=volume_marker)
@@ -463,7 +462,6 @@ def time_stepping(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coeff
 
 
 
-    n0 = FacetNormal(mesh)
     for n in range(num_steps):
 
     
@@ -497,7 +495,10 @@ def time_stepping(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coeff
         D=update_D(mesh,volume_marker,D,T)   
     return
 
-def solving(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx):
+def solving(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx,n0):
+  
+
+  
   values_heat_transfers=[]
   values_tritium_diffusion=[]
   header_heat_transfers=''
@@ -531,7 +532,7 @@ if __name__=="__main__":
 
     Time, num_steps,dt=get_solving_parameters(data) #Gets the parameters (final time, time steps...)
 
-    mesh, xdmf_in=define_mesh(data)
+    mesh, xdmf_in,n0=define_mesh(data)
 
     V, V0=define_functionspaces(data)
 
@@ -551,4 +552,4 @@ if __name__=="__main__":
 
     FT,q=define_variational_problem_heat_transfer(solve_heat_transfer,solve_transient,V,data)
 
-    solving(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx)
+    solving(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx,n0)
