@@ -46,6 +46,7 @@ def auto_mesh(data):
     cubit.cmd('Trimesher surface gradation 1.3')
     cubit.cmd('Trimesher volume gradation 1.3')
     cubit.cmd('mesh volume all')
+    return
 
 def get_nodes_in_tets_string(tets_in_volumes):
     string = ''
@@ -82,7 +83,7 @@ def get_surface_id_string(triangles_in_tets):
     return string
 
 def write_file(data):
-    tets_in_volumes = cubit.parse_cubit_list("tet", " in volume all "),
+    tets_in_volumes = cubit.parse_cubit_list("tet", " in volume all ")
     triangles_in_tets = sorted(cubit.parse_cubit_list("tri", " in tet all "))
     f = open(data["mesh_file"], 'w')
     f.write('<?xml version="1.0"?>')
