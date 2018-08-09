@@ -1,10 +1,14 @@
 import json
 from pprint import pprint
 import ast
+import argparse
 
-# run this script with the following commands
+# run this script with the following commands in order to mesh from step files
 # trelis -nographics -batch make_xdmf_mesh_with_trelis.py "json_input='MOT_parameters_breeder_blankets.json'"
 # trelis make_xdmf_mesh_with_trelis.py "json_input='MOT_parameters_breeder_blankets.json'"
+
+#In order to mesh from an existing project. Write the .cub project path in json_input and run the following: 
+# trelis make_xdmf_mesh_with_trelis.py "json_input='MOT_parameters_breeder_blankets.json'" project=1
 
 def byteify(input):
     if isinstance(input, dict):
@@ -114,9 +118,13 @@ def write_file(tets_in_volumes,triangles_in_tets,data):
     f.close()
     return
 
-
-#Meshing
 data=get_json_input(cubit.get_aprepro_vars())
-auto_mesh(data)
-### Create mesh file
-write_file(cubit.parse_cubit_list("tet"," in volume all "),sorted(cubit.parse_cubit_list("tri"," in tet all ")),data)
+if 'project' in cubit.get_aprepro_vars():
+    print('Opening from project')
+    cubit.cmd('open "'+str(data['structure_and_materials']['trelis_project'])+'"')
+    write_file(cubit.parse_cubit_list("tet"," in volume all "),sorted(cubit.parse_cubit_list("tri"," in tet all ")),data)
+    print('Cest fini')
+else:
+    print('Meshing from STEP files')
+    auto_mesh(data)
+    write_file(cubit.parse_cubit_list("tet"," in volume all "),sorted(cubit.parse_cubit_list("tri"," in tet all ")),data)
