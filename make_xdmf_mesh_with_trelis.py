@@ -8,7 +8,7 @@ import argparse
 # trelis make_xdmf_mesh_with_trelis.py "json_input='MOT_parameters_breeder_blankets.json'"
 
 #In order to mesh from an existing project. Write the .cub project path in json_input and run the following: 
-# trelis make_xdmf_mesh_with_trelis.py "json_input='MOT_parameters_breeder_blankets.json'" project=1
+# trelis make_xdmf_mesh_with_trelis.py "json_input='MOT_parameters_breeder_blankets.json'"
 
 def byteify(input):
     if isinstance(input, dict):
@@ -32,6 +32,7 @@ def get_json_input(aprepro_vars):
         sys.exit()
         return
 def auto_mesh(data):
+    print('Meshing from STEP files')
     cubit.cmd('reset')
     for step_file in data['structure_and_materials']['step_files']:
         print('loading step file ', step_file)
@@ -77,7 +78,9 @@ def get_surface_id_string(triangles_in_tets):
         surface_id = cubit.parse_cubit_list("surface", " in tri " + str(tri_id))[0]
         string += '            ' + str(surface_id) + '\n'
     return string
-def write_file(tets_in_volumes,triangles_in_tets,data):
+def write_file(data):
+    tets_in_volumes = cubit.parse_cubit_list("tet"," in volume all "),
+    triangles_in_tets = sorted(cubit.parse_cubit_list("tri"," in tet all "))
     f = open(data["mesh_file"], 'w') 
     f.write('<?xml version="1.0"?>')
     f.write('<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>\n')
@@ -116,15 +119,16 @@ def write_file(tets_in_volumes,triangles_in_tets,data):
     f.write('    </Domain>\n')
     f.write('    </Xdmf>\n')
     f.close()
-    return
+    print('Cest fini')
+
 
 data=get_json_input(cubit.get_aprepro_vars())
-if 'project' in cubit.get_aprepro_vars():
-    print('Opening from project')
+if 'trelis_project' in data['structure_and_materials']:
+    print('Opening from project', data['structure_and_materials']['trelis_project'])
     cubit.cmd('open "'+str(data['structure_and_materials']['trelis_project'])+'"')
-    write_file(cubit.parse_cubit_list("tet"," in volume all "),sorted(cubit.parse_cubit_list("tri"," in tet all ")),data)
-    print('Cest fini')
+    write_file(data)
 else:
-    print('Meshing from STEP files')
     auto_mesh(data)
-    write_file(cubit.parse_cubit_list("tet"," in volume all "),sorted(cubit.parse_cubit_list("tri"," in tet all ")),data)
+    write_file(data)
+
+#trailing empty line required by Trelis python 
