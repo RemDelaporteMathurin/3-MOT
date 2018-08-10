@@ -1,13 +1,13 @@
 {
-    "quality" : "5",
-
+    "quality" : "7",
+    "scaling" : "1",
     "mesh_file" : "mesh_and_markers_RCB.xdmf",
 
     "output_file" : "solution.pvd",
 
 
     "structure_and_materials": {
-      "step_files":["geometry_files/rcb/concrete.stp","geometry_files/rcb/polymer.stp","geometry_files/rcb/steel.stp"],
+      "project_files":["geometry_files/rcb/concrete.stp","geometry_files/rcb/polymer.stp","geometry_files/rcb/steel.stp"],
       "materials":[
         {
           "volumes":[1],

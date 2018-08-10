@@ -1,13 +1,13 @@
 {
-    "quality" : "10",
-    "scaling" : "0.001",
+    "quality" : 10,
+    "scaling" : 0.001,
     "mesh_file" : "mesh_and_markers_breeder_blankets.xdmf",
 
     "output_file" : "solution.pvd",
     "field_file" : "field.xdmf",
 
     "structure_and_materials": {
-      "step_files":["geometry_files/breeder_blanket/slice_armour_mod1.step",
+      "project_files":["geometry_files/breeder_blanket/slice_armour_mod1.step",
         "geometry_files/breeder_blanket/slice_back_lithium_lead_mod1.step",
         "geometry_files/breeder_blanket/slice_back_plate_1_mod1.step",
         "geometry_files/breeder_blanket/slice_back_plate_2_mod1.step",
@@ -42,7 +42,7 @@
           "neumann":[
             {
               "surface":[1,4,7],
-              "value":"0.5e6"
+              "value":0.5e6
             }
               ],
           "dc":[
