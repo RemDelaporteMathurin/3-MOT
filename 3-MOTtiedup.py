@@ -130,7 +130,7 @@ def define_BC_diffusion(data,solve_diffusion,V,surface_marker,ds):
       print('Defining BC tritium diffusion')
       #DC
       for DC in data['physics']['tritium_diffusion']['boundary_conditions']['dc']:
-        value_DC=Expression(DC['value'],t=0,degree=2)
+        value_DC=Expression(str(DC['value']),t=0,degree=2)
         if type(DC['surface'])==list:
           for surface in DC['surface']:
             #print(surface)
@@ -145,7 +145,7 @@ def define_BC_diffusion(data,solve_diffusion,V,surface_marker,ds):
 
       #Neumann
       for Neumann in data['physics']['tritium_diffusion']['boundary_conditions']['neumann']:
-        value=Expression(Neumann['value'],t=0,degree=2)
+        value=Expression(str(Neumann['value']),t=0,degree=2)
         if type(Neumann['surface'])==list:
           for surface in Neumann['surface']:
             Neumann_BC_c_diffusion.append([ds(surface),value])
@@ -175,7 +175,7 @@ def define_BC_heat_transfer(data,solve_heat_transfer,V,surface_marker,ds):
       #DC
       for DC in data['physics']['heat_transfers']['boundary_conditions']['dc']:
         #value_DC=DC['value'] #todo make this value able to be an Expression (time or space dependent)
-        value_DC=Expression(DC['value'],t=0,degree=2)
+        value_DC=Expression(str(DC['value']),t=0,degree=2)
         if type(DC['surface'])==list:
           for surface in DC['surface']:
             #print(surface)
@@ -190,7 +190,7 @@ def define_BC_heat_transfer(data,solve_heat_transfer,V,surface_marker,ds):
 
       #Neumann
       for Neumann in data['physics']['heat_transfers']['boundary_conditions']['neumann']:
-        value=Expression(Neumann['value'],t=0,degree=2)
+        value=Expression(str(Neumann['value']),t=0,degree=2)
 
         if type(Neumann['surface'])==list:
           for surface in Neumann['surface']:
