@@ -16,10 +16,10 @@ import inspect
 import math
 
 
-
 def get_apreprovars(apreprovars):
     return 'MOT_parameters_RCB.json'
     #return 'MOT_parameters_breeder_blankets.json'
+
 
 def byteify(input):
     if isinstance(input, dict):
@@ -32,48 +32,52 @@ def byteify(input):
     else:
         return input
 
+
 def get_databases(name_database):
     with open(name_database) as f:
         data = json.load(f)
-    data=byteify(data)
+    data = byteify(data)
     return data
+
 
 def get_solvers(data):
     print('Getting the solvers')
-    if data['solving_parameters']['study']=="steady_state":
-      solve_transient=False
+    if data['solving_parameters']['study'] == "steady_state":
+        solve_transient = False
     else:
-      if data['solving_parameters']['study']=='transient':
-        solve_transient=True
-    if data['physics']['solve_heat_transfer']==1:
-        solve_heat_transfer=True
-    else:
-        solve_heat_transfer=False
-    if data['physics']['solve_tritium_diffusion']==1:
-        solve_diffusion=True
-    else:
-        solve_diffusion=False
-    if data['physics']['diffusion_coeff_temperature_dependent']==1:
-        solve_diffusion_coefficient_temperature_dependent=True
-    else:
-        solve_diffusion_coefficient_temperature_dependent=False
-    if data['physics']['solve_with_decay']==1:
-        solve_with_decay=True
-    else:
-        solve_with_decay=False
-    calculate_off_gassing=True
-    return solve_transient,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,solve_with_decay
+        if data['solving_parameters']['study'] == 'transient':
+            solve_transient = True
+        if data['physics']['solve_heat_transfer'] == 1:
+            solve_heat_transfer = True
+        else:
+            solve_heat_transfer = False
+        if data['physics']['solve_tritium_diffusion'] == 1:
+            solve_diffusion = True
+        else:
+            solve_diffusion = False
+        if data['physics']['diffusion_coeff_temperature_dependent'] == 1:
+            solve_diffusion_coefficient_temperature_dependent = True
+        else:
+            solve_diffusion_coefficient_temperature_dependent = False
+        if data['physics']['solve_with_decay'] == 1:
+            solve_with_decay = True
+        else:
+            solve_with_decay = False
+    calculate_off_gassing = True
+    return solve_transient, solve_heat_transfer, solve_diffusion, solve_diffusion_coefficient_temperature_dependent, solve_with_decay
+
 
 def get_solving_parameters(data):
     print('Getting the solving parameters')
-    Time=0
-    num_steps=0
-    dt=0
-    if solve_transient==True:
-      Time = float(data["solving_parameters"]['final_time'])  #60000*365.25*24*3600.0# final time 
-      num_steps = data['solving_parameters']['number_of_time_steps'] # number of time steps
-      dt = Time / num_steps # time step size
-    return Time,num_steps,dt
+    Time = 0
+    num_steps = 0
+    dt = 0
+    if solve_transient == True:
+        Time = float(data["solving_parameters"]['final_time'])  #60000*365.25*24*3600.0# final time 
+        num_steps = data['solving_parameters']['number_of_time_steps']  #number of time steps
+        dt = Time / num_steps  # time step size
+    return Time, num_steps, dt
+
 
 def define_mesh(data):
     print('Defining mesh')
@@ -87,13 +91,15 @@ def define_mesh(data):
     subdomains = MeshFunction("size_t", mesh, mesh.topology().dim())
     print('Number of cell is '+ str(len(subdomains.array())))
     n0 = FacetNormal(mesh)
-    return mesh,xdmf_in,n0
+    return mesh, xdmf_in, n0
+
 
 def define_functionspaces(data):
     print('Defining Functionspaces')
     V = FunctionSpace(mesh, 'P', 1) #FunctionSpace of the solution c
     V0 = FunctionSpace(mesh, 'DG', 0) #FunctionSpace of the materials properties
     return V,V0
+
 
 def get_surface_marker(mesh,xdmf_in):
     print('Marking the surfaces')
@@ -104,8 +110,9 @@ def get_surface_marker(mesh,xdmf_in):
     #xdmf_out.write(surface_marker_mvc, xdmf_encoding)
     surface_marker = MeshFunction("size_t", mesh, surface_marker_mvc)
 
-    ds = Measure('ds', domain=mesh, subdomain_data = surface_marker)
-    return surface_marker,ds
+    ds = Measure('ds', domain=mesh, subdomain_data=surface_marker)
+    return surface_marker, ds
+
 
 def define_BC_diffusion(data,solve_diffusion,V,surface_marker,ds):
     ##Tritium Diffusion
