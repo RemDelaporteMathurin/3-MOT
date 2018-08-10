@@ -15,8 +15,8 @@ import inspect
 
 
 def get_apreprovars(apreprovars):
-    #return 'MOT_parameters_RCB.json'
-    return 'MOT_parameters_breeder_blankets.json'
+    return 'MOT_parameters_RCB.json'
+    #return 'MOT_parameters_breeder_blankets.json'
 
 def byteify(input):
     if isinstance(input, dict):
@@ -91,23 +91,6 @@ def define_functionspaces(data):
     V = FunctionSpace(mesh, 'P', 1) #FunctionSpace of the solution c
     V0 = FunctionSpace(mesh, 'DG', 0) #FunctionSpace of the materials properties
     return V,V0
-
-def define_initial_values(solve_heat_transfer,solve_diffusion,data,V):
-    ##Tritium concentration
-    c_n=Function(V)
-    T_n=Function(V)
-    if solve_diffusion==True:
-      print('Defining initial values tritium diffusion')
-      #print(str(data['physics']['tritium_diffusion']['initial_value']))
-      iniC = Expression(str(data['physics']['tritium_diffusion']['initial_value']),degree=2) 
-      c_n = interpolate(iniC, V)
-    ##Temperature
-    if solve_heat_transfer==True:
-      print('Defining initial values heat transfer')
-      #print(str(data['physics']['heat_transfers']['initial_value']))
-      iniT = Expression(str(data['physics']['heat_transfers']['initial_value']),degree=2) 
-      T_n = interpolate(iniT, V)
-    return c_n,T_n
 
 def get_surface_marker(mesh,xdmf_in):
     print('Marking the surfaces')
@@ -221,6 +204,42 @@ def get_volume_markers(mesh):
     dx = Measure('dx', domain=mesh, subdomain_data=volume_marker)
     return volume_marker,dx
 
+def define_initial_values(solve_heat_transfer,solve_diffusion,data,V):
+    ##Tritium concentration
+    c_n=Function(V)
+    T_n=Function(V)
+    if solve_diffusion==True:
+      print('Defining initial values tritium diffusion')
+      #print(str(data['physics']['tritium_diffusion']['initial_value']))
+      iniC = Expression(str(data['physics']['tritium_diffusion']['initial_value']),degree=2) 
+      c_n = interpolate(iniC, V)
+    ##Temperature
+    if solve_heat_transfer==True:
+      print('Defining initial values heat transfer')
+      #print(str(data['physics']['heat_transfers']['initial_value']))
+      iniT = Expression(str(data['physics']['heat_transfers']['initial_value']),degree=2) 
+      T_n = interpolate(iniT, V)
+    return c_n,T_n
+
+def define_source_terms(solve_heat_transfer,solve_diffusion,dx,data,V):
+  Source_c_diffusion=list()
+  Source_T_diffusion=list()
+
+  if solve_diffusion==True:
+    for source in data["physics"]["tritium_diffusion"]["source_terms"]:
+      value=Expression(str(source["value"]),t=0,degree=2)
+      for volume in source["volumes"]:
+        Source_c_diffusion.append([dx(volume),value])
+
+  if solve_heat_transfer==True:
+    for source in data["physics"]["heat_transfers"]["source_terms"]:
+      value=Expression(str(source["value"]),t=0,degree=2)
+      for volume in source["volumes"]:
+        Source_T_diffusion.append([dx(volume),value])
+
+
+  return Source_c_diffusion,Source_T_diffusion
+
 def calculate_D(T,material_id):
   R=8.314 #Perfect gas constant
   if material_id=="concrete": #Concrete
@@ -303,7 +322,7 @@ def define_materials_properties(V0,data,volume_marker):
       #print(D.vector()[cell_no])
     return D,thermal_conductivity,specific_heat,density
 
-def define_variational_problem_diffusion(solve_diffusion,solve_transient,solve_with_decay,V,data):
+def define_variational_problem_diffusion(solve_diffusion,solve_transient,solve_with_decay,V,Neumann_BC_c_diffusion,Robin_BC_c_diffusion,Source_c_diffusion,data):
     if solve_diffusion==True:
         print('Defining variation problem tritium diffusion')
         c = TrialFunction(V)#c is the tritium concentration
@@ -313,38 +332,40 @@ def define_variational_problem_diffusion(solve_diffusion,solve_transient,solve_w
         else:
             decay=0
     
-        f = Expression(str(data['physics']['tritium_diffusion']['source_term']),t=0,degree=2)#This is the tritium volumetric source term 
         if solve_transient==True:
           F=((c-c_n)/dt)*vc*dx
         else:
           F=0
-        
-        F+= D*dot(grad(c), grad(vc))*dx + (-f+decay*c)*vc*dx 
+        for source in Source_c_diffusion:
+          F+=-vc*source[1]*source[0]
+
+        F+= D*dot(grad(c), grad(vc))*dx + decay*c*vc*dx 
         for Neumann in Neumann_BC_c_diffusion:
             F += vc * Neumann[1]*Neumann[0] 
         for Robin in Robin_BC_c_diffusion:
             F += D*vc*Robin[1]*Robin[0]
-        return F,f
+        return F
     return False,False
     
-def define_variational_problem_heat_transfer(solve_heat_transfer,solve_transient,V,data):
+def define_variational_problem_heat_transfer(solve_heat_transfer,solve_transient,V,Neumann_BC_T_diffusion,Robin_BC_T_diffusion,Source_T_diffusion,data):
     
     if solve_heat_transfer==True:
         print('Defining variation problem heat transfer')
         T = TrialFunction(V) #T is the temperature
         vT = TestFunction(V)
-        q = Expression(str(data['physics']['heat_transfers']['source_term']),t=0,degree=2) #q is the volumetric heat source term
         if solve_transient==True:
           FT=specific_heat*density*((T-T_n)/dt)*vT*dx
         else:
           FT=0
-        FT +=  thermal_conductivity*dot(grad(T), grad(vT))*dx - q*vT*dx #This is the heat transfer equation         
+        for source in Source_T_diffusion:
+          FT+=-vT*source[1]*source[0]        
+        FT +=  thermal_conductivity*dot(grad(T), grad(vT))*dx #This is the heat transfer equation         
         for Neumann in Neumann_BC_T_diffusion:
             #print(Neumann)
             FT += - vT * Neumann[1]*Neumann[0]    
         for Robin in Robin_BC_T_diffusion:
             FT += vT* Robin[1] * (T-Robin[2])*Robin[0]
-        return FT,q
+        return FT
     return False,False
 
 def update_D(mesh,volume_marker,D,T):
@@ -384,7 +405,14 @@ def update_bc(t,physic):
       #print(bci_T)
   return bcs
 
-
+def update_source_term(t,physic):
+  if physic=="tritium_diffusion":
+    for source in Source_c_diffusion:
+      source[1].t=t
+  if physic=="heat_transfers":
+    for source in Source_T_diffusion:
+      source[1].t=t
+  return
 
 def calculate_flux(surface,ds,solution,property,n0):
   flux=assemble(-property*dot(grad(solution),n0)*ds(surface))
@@ -432,7 +460,6 @@ def post_processing(data,solution,physic,header,values,t,ds,dx,property,n0):
   write_in_file(header,values,output_file)
   return
 
-
 def initialise_post_processing(data,physic):
   output_file=data["post_processing"][physic]["output_file"]
   header=['t(s)']
@@ -474,7 +501,7 @@ def time_stepping(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coeff
 
       # Compute solution concentration
       if solve_diffusion==True:
-        f.t += dt
+        update_source_term(t,'tritium_diffusion')
         solve(lhs(F)==rhs(F),c,bcs_c)
         output_file << (c,t)
         c_n.assign(c)
@@ -483,7 +510,7 @@ def time_stepping(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coeff
 
       # Compute solution temperature
       if solve_heat_transfer==True:
-        q.t += dt
+        update_source_term(t,'heat_transfers')
         solve(lhs(FT)==rhs(FT), T, bcs_T)
         output_file << (T,t)
         T_n.assign(T)
@@ -495,7 +522,7 @@ def time_stepping(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coeff
         D=update_D(mesh,volume_marker,D,T)   
     return
 
-def solving(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx,n0):
+def solving(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,Source_c_diffusion,bcs_c,FT,Source_T_diffusion,bcs_T,ds,dx,n0):
   
 
   
@@ -509,7 +536,7 @@ def solving(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient
     header_tritium_diffusion=initialise_post_processing(data,"tritium_diffusion")
   
   if solve_transient==True:
-    time_stepping(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx,header_heat_transfers,header_tritium_diffusion,values_heat_transfers,values_tritium_diffusion)
+    time_stepping(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,Source_c_diffusion,bcs_c,FT,Source_T_diffusion,bcs_T,ds,dx,header_heat_transfers,header_tritium_diffusion,values_heat_transfers,values_tritium_diffusion)
   else:
     output_file  = File(data["output_file"])
     if solve_heat_transfer==True:
@@ -535,8 +562,12 @@ if __name__=="__main__":
     mesh, xdmf_in,n0=define_mesh(data)
 
     V, V0=define_functionspaces(data)
+    
+    volume_marker, dx=get_volume_markers(mesh)
 
     c_n, T_n=define_initial_values(solve_heat_transfer,solve_diffusion,data,V)
+
+    Source_c_diffusion,Source_T_diffusion=define_source_terms(solve_heat_transfer,solve_diffusion,dx,data,V)
 
     surface_marker, ds=get_surface_marker(mesh,xdmf_in)
 
@@ -544,12 +575,12 @@ if __name__=="__main__":
 
     bcs_T, Neumann_BC_T_diffusion,Robin_BC_T_diffusion=define_BC_heat_transfer(data,solve_heat_transfer,V,surface_marker,ds)
 
-    volume_marker, dx=get_volume_markers(mesh)
+
 
     D,thermal_conductivity,specific_heat,density=define_materials_properties(V0,data,volume_marker)
 
-    F,f=define_variational_problem_diffusion(solve_diffusion,solve_transient,solve_with_decay,V,data)
+    F=define_variational_problem_diffusion(solve_diffusion,solve_transient,solve_with_decay,V,Neumann_BC_c_diffusion,Robin_BC_c_diffusion,Source_c_diffusion,data)
 
-    FT,q=define_variational_problem_heat_transfer(solve_heat_transfer,solve_transient,V,data)
+    FT=define_variational_problem_heat_transfer(solve_heat_transfer,solve_transient,V,Neumann_BC_T_diffusion,Robin_BC_T_diffusion,Source_T_diffusion,data)
 
-    solving(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx,n0)
+    solving(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,Source_c_diffusion,bcs_c,FT,Source_T_diffusion,bcs_T,ds,dx,n0)
