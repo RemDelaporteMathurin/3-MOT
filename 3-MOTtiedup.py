@@ -10,7 +10,10 @@ import ast
 from pprint import pprint
 from materials_properties import *
 import inspect
-
+#from tqdm import *
+#from random import random, randint
+#from time import sleep
+import math
 
 
 
@@ -478,7 +481,9 @@ def initialise_post_processing(data,physic):
   return header
 
 def time_stepping(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,f,bcs_c,FT,q,bcs_T,ds,dx,header_heat_transfers,header_tritium_diffusion,values_heat_transfers,values_tritium_diffusion):
+    #pbar = tqdm(total=100,bar_format='{desc}: {percentage:3.0f}%|{bar}|{n:.0f}/{total_fmt} [{elapsed}<{remaining}, ' '{rate_fmt}{postfix}]')
     ### Time-stepping
+    set_log_active(False)
     print('Time stepping')
     T = Function(V)
     c = Function(V)
@@ -490,14 +495,13 @@ def time_stepping(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coeff
 
 
     for n in range(num_steps):
-
-    
-      # Update current time
-      print("t= "+str(t)+" s")
-      print("t= "+str(t/3600/24/365.25)+" years")
-      print(str(100*t/Time)+" %")
+      #pbar.update(100*dt/Time)
+       #Update current time
+      #print("t= "+str(t)+" s")
+      #print("t= "+str(t/3600/24/365.25)+" years")
+      #print(str(100*t/Time)+" %")
       t += dt
-    
+      print '{0}% {1} \r'.format(100*t/Time,'|'*int(50*t/Time)),
 
       # Compute solution concentration
       if solve_diffusion==True:
@@ -553,34 +557,37 @@ def solving(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient
       
 
 if __name__=="__main__":
-    apreprovars=get_apreprovars(2)
-    data=get_databases(apreprovars) #This returns an object data=json.load()
-    solve_transient,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,solve_with_decay=get_solvers(data) #Gets the solvers
+  
 
-    Time, num_steps,dt=get_solving_parameters(data) #Gets the parameters (final time, time steps...)
+  
+  apreprovars=get_apreprovars(2)
+  data=get_databases(apreprovars) #This returns an object data=json.load()
+  solve_transient,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,solve_with_decay=get_solvers(data) #Gets the solvers
 
-    mesh, xdmf_in,n0=define_mesh(data)
+  Time, num_steps,dt=get_solving_parameters(data) #Gets the parameters (final time, time steps...)
 
-    V, V0=define_functionspaces(data)
-    
-    volume_marker, dx=get_volume_markers(mesh)
+  mesh, xdmf_in,n0=define_mesh(data)
 
-    c_n, T_n=define_initial_values(solve_heat_transfer,solve_diffusion,data,V)
+  V, V0=define_functionspaces(data)
+  
+  volume_marker, dx=get_volume_markers(mesh)
 
-    Source_c_diffusion,Source_T_diffusion=define_source_terms(solve_heat_transfer,solve_diffusion,dx,data,V)
+  c_n, T_n=define_initial_values(solve_heat_transfer,solve_diffusion,data,V)
 
-    surface_marker, ds=get_surface_marker(mesh,xdmf_in)
+  Source_c_diffusion,Source_T_diffusion=define_source_terms(solve_heat_transfer,solve_diffusion,dx,data,V)
 
-    bcs_c, Neumann_BC_c_diffusion,Robin_BC_c_diffusion=define_BC_diffusion(data,solve_diffusion,V,surface_marker,ds)
+  surface_marker, ds=get_surface_marker(mesh,xdmf_in)
 
-    bcs_T, Neumann_BC_T_diffusion,Robin_BC_T_diffusion=define_BC_heat_transfer(data,solve_heat_transfer,V,surface_marker,ds)
+  bcs_c, Neumann_BC_c_diffusion,Robin_BC_c_diffusion=define_BC_diffusion(data,solve_diffusion,V,surface_marker,ds)
+
+  bcs_T, Neumann_BC_T_diffusion,Robin_BC_T_diffusion=define_BC_heat_transfer(data,solve_heat_transfer,V,surface_marker,ds)
 
 
 
-    D,thermal_conductivity,specific_heat,density=define_materials_properties(V0,data,volume_marker)
+  D,thermal_conductivity,specific_heat,density=define_materials_properties(V0,data,volume_marker)
 
-    F=define_variational_problem_diffusion(solve_diffusion,solve_transient,solve_with_decay,V,Neumann_BC_c_diffusion,Robin_BC_c_diffusion,Source_c_diffusion,data)
+  F=define_variational_problem_diffusion(solve_diffusion,solve_transient,solve_with_decay,V,Neumann_BC_c_diffusion,Robin_BC_c_diffusion,Source_c_diffusion,data)
 
-    FT=define_variational_problem_heat_transfer(solve_heat_transfer,solve_transient,V,Neumann_BC_T_diffusion,Robin_BC_T_diffusion,Source_T_diffusion,data)
+  FT=define_variational_problem_heat_transfer(solve_heat_transfer,solve_transient,V,Neumann_BC_T_diffusion,Robin_BC_T_diffusion,Source_T_diffusion,data)
 
-    solving(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,Source_c_diffusion,bcs_c,FT,Source_T_diffusion,bcs_T,ds,dx,n0)
+  solving(data,solve_heat_transfer,solve_diffusion,solve_diffusion_coefficient_temperature_dependent,Time,num_steps,dt,V,D,thermal_conductivity,F,Source_c_diffusion,bcs_c,FT,Source_T_diffusion,bcs_T,ds,dx,n0)
