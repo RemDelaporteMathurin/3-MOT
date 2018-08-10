@@ -32,7 +32,7 @@ def get_json_input(aprepro_vars):
 def auto_mesh(data):
     print('Meshing from STEP files')
     cubit.cmd('reset')
-    for step_file in data['structure_and_materials']['step_files']:
+    for step_file in data['structure_and_materials']['project_files']:
         print('loading step file ', step_file)
         cubit.cmd('import step "' + step_file + '" heal')
     cubit.cmd('vol all scale ' + str(data['scaling']))
@@ -96,11 +96,11 @@ def write_file(data):
     f.write(get_nodes_in_tets_string(tets_in_volumes))
     f.write('        </DataItem>\n')
     f.write('      </Topology>\n')
-    f.write('    <Geometry GeometryType="XYZ">\n')
+    f.write('      <Geometry GeometryType="XYZ">\n')
     f.write('        <DataItem Dimensions="' + str(len(cubit.parse_cubit_list("node", " in volume all ")))+' 3" Format="XML">\n')
     f.write(get_nodes_coordinates_string(sorted(cubit.parse_cubit_list("node", " in volume all "))))
     f.write('        </DataItem>\n')
-    f.write('    </Geometry>\n')
+    f.write('      </Geometry>\n')
     f.write('      <Attribute Name="volume_marker_volume_id" AttributeType="Scalar" Center="Cell">\n')
     f.write('        <DataItem Dimensions="' + str(len(tets_in_volumes)) + ' 1" Format="XML">\n')
     f.write(get_volumie_id_string(tets_in_volumes))
@@ -109,30 +109,32 @@ def write_file(data):
     f.write('    </Grid>\n')
     f.write('    <Grid Name="mesh" GridType="Uniform">\n')
     f.write('      <Topology NumberOfElements="' + str(len(triangles_in_tets)) + '" TopologyType="Triangle" NodesPerElement="3">\n')
-    f.write('      <DataItem Dimensions="' + str(len(triangles_in_tets)) + ' 3" NumberType="UInt" Format="XML">\n')
+    f.write('        <DataItem Dimensions="' + str(len(triangles_in_tets)) + ' 3" NumberType="UInt" Format="XML">\n')
     f.write(get_nodes_in_tris_string(triangles_in_tets))
     f.write('        </DataItem>\n')
-    f.write('    </Topology>\n')
+    f.write('      </Topology>\n')
     f.write('      <Geometry Reference="XML">/Xdmf/Domain/Grid/Geometry</Geometry>\n')
     f.write('      <Attribute Name="surface_marker" AttributeType="Scalar" Center="Cell">\n')
-    f.write('      <DataItem Dimensions="' + str(len(triangles_in_tets)) + ' 1" Format="XML">\n')
+    f.write('        <DataItem Dimensions="' + str(len(triangles_in_tets)) + ' 1" Format="XML">\n')
     f.write(get_surface_id_string(triangles_in_tets))
     f.write('        </DataItem>\n')
-    f.write('    </Attribute>\n')
+    f.write('      </Attribute>\n')
     f.write('    </Grid>\n')
-    f.write('    </Domain>\n')
-    f.write('    </Xdmf>\n')
+    f.write('  </Domain>\n')
+    f.write('</Xdmf>\n')
     f.close()
     print('Cest fini')
 
 
 data = get_json_input(cubit.get_aprepro_vars())
-if 'trelis_project' in data['structure_and_materials']:
-    print('Opening from project', data['structure_and_materials']['trelis_project'])
-    cubit.cmd('open "' + str(data['structure_and_materials']['trelis_project']) + '"')
-    write_file(data)
-else:
+if type(data['structure_and_materials']['project_files'])==list and (data['structure_and_materials']['project_files'][0].endswith('.step') or data['structure_and_materials']['project_files'][0].endswith('.stp')):
     auto_mesh(data)
     write_file(data)
+else:
+    if data['structure_and_materials']['project_files'].endswith('.cub'):
+        print('Opening from project', data['structure_and_materials']['project_files'])
+        cubit.cmd('open "' + str(data['structure_and_materials']['project_files']) + '"')
+        write_file(data)
+
 
 #trailing empty line required by Trelis python 
