@@ -4,8 +4,8 @@ import ast
 import argparse
 
 # run this script with the following commands in order to mesh from step files
-# trelis -nographics -batch make_xdmf_mesh_with_trelis.py "json_input='MOT_parameters_breeder_blankets.json'"
-# trelis make_xdmf_mesh_with_trelis.py "json_input='MOT_parameters_breeder_blankets.json'"
+# trelis -nographics -batch mesher.py "json_input='MOT_parameters_breeder_blankets.json'"
+# trelis mesher.py "json_input='MOT_parameters_breeder_blankets.json'"
 
 
 def byteify(input):
