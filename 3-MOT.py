@@ -17,8 +17,8 @@ import math
 
 
 def get_apreprovars(apreprovars):
-    return 'MOT_parameters_RCB.json'
-    #return 'MOT_parameters_breeder_blankets.json'
+    #return 'MOT_parameters_RCB.json'
+    return 'MOT_parameters_breeder_blankets.json'
 
 
 def byteify(input):
@@ -47,22 +47,22 @@ def get_solvers(data):
     else:
         if data['solving_parameters']['study'] == 'transient':
             solve_transient = True
-        if data['physics']['solve_heat_transfer'] == 1:
-            solve_heat_transfer = True
-        else:
-            solve_heat_transfer = False
-        if data['physics']['solve_tritium_diffusion'] == 1:
-            solve_diffusion = True
-        else:
-            solve_diffusion = False
-        if data['physics']['diffusion_coeff_temperature_dependent'] == 1:
-            solve_diffusion_coefficient_temperature_dependent = True
-        else:
-            solve_diffusion_coefficient_temperature_dependent = False
-        if data['physics']['solve_with_decay'] == 1:
-            solve_with_decay = True
-        else:
-            solve_with_decay = False
+    if data['physics']['solve_heat_transfer'] == 1:
+        solve_heat_transfer = True
+    else:
+        solve_heat_transfer = False
+    if data['physics']['solve_tritium_diffusion'] == 1:
+        solve_diffusion = True
+    else:
+        solve_diffusion = False
+    if data['physics']['diffusion_coeff_temperature_dependent'] == 1:
+        solve_diffusion_coefficient_temperature_dependent = True
+    else:
+        solve_diffusion_coefficient_temperature_dependent = False
+    if data['physics']['solve_with_decay'] == 1:
+        solve_with_decay = True
+    else:
+        solve_with_decay = False
     calculate_off_gassing = True
     return solve_transient, solve_heat_transfer, solve_diffusion, solve_diffusion_coefficient_temperature_dependent, solve_with_decay
 
@@ -124,22 +124,21 @@ def define_BC_diffusion(data, solve_diffusion, V, surface_marker, ds):
         # DC
         for DC in data['physics']['tritium_diffusion']['boundary_conditions']['dc']:
             value_DC = Expression(str(DC['value']), t=0, degree=2)
-        if type(DC['surface']) == list:
-            for surface in DC['surface']:
-                bci_c = DirichletBC(V, value_DC, surface_marker, surface)
+            if type(DC['surface']) == list:
+                for surface in DC['surface']:
+                    bci_c = DirichletBC(V, value_DC, surface_marker, surface)
+                    bcs_c.append(bci_c)
+            else:
+                bci_c = DirichletBC(V, value_DC, surface_marker, DC['surface'])
                 bcs_c.append(bci_c)
-        else:
-            bci_c = DirichletBC(V, value_DC, surface_marker, DC['surface'])
-            bcs_c.append(bci_c)
         # Neumann
         for Neumann in data['physics']['tritium_diffusion']['boundary_conditions']['neumann']:
             value = Expression(str(Neumann['value']), t=0, degree=2)
             if type(Neumann['surface']) == list:
                 for surface in Neumann['surface']:
                     Neumann_BC_c_diffusion.append([ds(surface), value])
-        else:
-            Neumann_BC_c_diffusion.append([ds(Neumann['surface']), value])
-      
+            else:
+                Neumann_BC_c_diffusion.append([ds(Neumann['surface']), value])
         # Robins
         for Robin in data['physics']['tritium_diffusion']['boundary_conditions']['robin']:
             value = Function(V)
@@ -149,7 +148,7 @@ def define_BC_diffusion(data, solve_diffusion, V, surface_marker, ds):
                     Robin_BC_c_diffusion.append([ds(surface), value])
             else:
                 Robin_BC_c_diffusion.append([ds(Robin['surface']), value])
-    return bcs_c,Neumann_BC_c_diffusion, Robin_BC_c_diffusion
+    return bcs_c, Neumann_BC_c_diffusion, Robin_BC_c_diffusion
 
 
 def define_BC_heat_transfer(data, solve_heat_transfer, V, surface_marker, ds):
@@ -178,11 +177,11 @@ def define_BC_heat_transfer(data, solve_heat_transfer, V, surface_marker, ds):
         for Neumann in data['physics']['heat_transfers']['boundary_conditions']['neumann']:
             value = Expression(str(Neumann['value']), t=0, degree=2)
 
-        if type(Neumann['surface']) == list:
-            for surface in Neumann['surface']:
-                Neumann_BC_T_diffusion.append([ds(surface), value])
-        else:
-            Neumann_BC_T_diffusion.append([ds(Neumann['surface']), value])
+            if type(Neumann['surface']) == list:
+                for surface in Neumann['surface']:
+                    Neumann_BC_T_diffusion.append([ds(surface), value])
+            else:
+                Neumann_BC_T_diffusion.append([ds(Neumann['surface']), value])
 
         # Robins
         for Robin in data['physics']['heat_transfers']['boundary_conditions']['robin']:
@@ -244,12 +243,19 @@ def define_source_terms(solve_heat_transfer, solve_diffusion, dx, data, sV):
 
 def calculate_D(T, material_id):
     R = 8.314  # Perfect gas constant
+    k_B = 8.6e-5
     if material_id == "concrete":  # Concrete
         return 2e-6  # 7.3e-7*np.exp(-6.3e3/T)
     elif material_id == "polymer":  # Polymer
         return 2.0e-7*np.exp(-29000.0/R/T)
     elif material_id == "steel":  # steel
         return 7.3e-7*np.exp(-6.3e3/T)
+    elif material_id == "tungsten":
+        return 4.1e-7*np.exp(-0.39/k_B/T)
+    elif material_id == "eurofer":
+        return 8.1e-8*np.exp(-14470/R/T)
+    elif material_id == "lithium_lead":
+        return 2.5e-7*np.exp(-27000/R/T)
     else:
         raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
 
@@ -552,7 +558,7 @@ def solving(data, solve_heat_transfer, solve_diffusion, solve_diffusion_coeffici
           c = Function(V)
           solve(lhs(F) == rhs(F), c, bcs_c)
           output_file << (c, 0.0)
-          post_processing(data, T, "tritium_diffusion", header_tritium_diffusion, values_tritium_diffusion, 0, ds, dx, D, n0)
+          post_processing(data, c, "tritium_diffusion", header_tritium_diffusion, values_tritium_diffusion, 0, ds, dx, D, n0)
 
 
 if __name__ == "__main__":
