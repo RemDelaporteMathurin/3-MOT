@@ -15,10 +15,10 @@ import inspect
 #from time import sleep
 import math
 
-
 def get_apreprovars(apreprovars):
     #return 'MOT_parameters_RCB.json'
-    return 'MOT_parameters_breeder_blankets.json'
+    #return 'MOT_parameters_breeder_blankets.json'
+    return 'MOT_parameters_CFD.json'
 
 
 def byteify(input):
@@ -55,6 +55,10 @@ def get_solvers(data):
         solve_diffusion = True
     else:
         solve_diffusion = False
+    if data['physics']['solve_laminar_flow'] == 1:
+        solve_laminar_flow = True
+    else:
+        solve_laminar_flow = False
     if data['physics']['diffusion_coeff_temperature_dependent'] == 1:
         solve_diffusion_coefficient_temperature_dependent = True
     else:
@@ -64,7 +68,9 @@ def get_solvers(data):
     else:
         solve_with_decay = False
     calculate_off_gassing = True
-    return solve_transient, solve_heat_transfer, solve_diffusion, solve_diffusion_coefficient_temperature_dependent, solve_with_decay
+    return solve_transient, solve_heat_transfer, solve_laminar_flow, \
+        solve_diffusion, solve_diffusion_coefficient_temperature_dependent, \
+        solve_with_decay
 
 
 def get_solving_parameters(data):
@@ -98,7 +104,8 @@ def define_functionspaces(data):
     print('Defining Functionspaces')
     V = FunctionSpace(mesh, 'P', 1)  # FunctionSpace of the solution c
     V0 = FunctionSpace(mesh, 'DG', 0)  # FunctionSpace of the materials properties
-    return V, V0
+    U = VectorFunctionSpace(mesh, 'P', 2) # FunctionSpace of velocity
+    return V, V0, U
 
 
 def get_surface_marker(mesh, xdmf_in):
@@ -193,6 +200,24 @@ def define_BC_heat_transfer(data, solve_heat_transfer, V, surface_marker, ds):
                 Robin_BC_T_diffusion.append([ds(Robin['surface']), Robin['hc_coeff'], Robin['t_amb']])
 
     return bcs_T, Neumann_BC_T_diffusion, Robin_BC_T_diffusion
+
+
+def define_BC_laminar_flow(data, solve_laminar_flow, U, V, surface_marker, ds):
+    print("Defining BC laminar flow")
+    bcu = []
+    for DC in data['physics']['laminar_flow']['boundary_conditions_velocity']['dc']:
+        value = Expression((DC['valuex'],DC['valuey'],DC['valuez']),t=0,degree=2)
+        for surface in DC['surface']:
+            bci = DirichletBC(U, value, surface_marker, surface)
+            bcu.append(bci)
+
+    bcp = []
+    for DC in data['physics']['laminar_flow']['boundary_conditions_pressure']['dc']:
+        value = Expression(str(DC['value']), t=0, degree=2)
+        for surface in DC['surface']:
+            bci = DirichletBC(V, value, surface_marker, surface)
+            bcp.append(bci)
+    return bcu, bcp
 
 
 def get_volume_markers(mesh):
@@ -315,7 +340,7 @@ def which_material_is_it(volume_id, data):
 def define_materials_properties(V0, data, volume_marker):
     # ##Defining materials properties
     print('Defining the materials properties')
-    
+
     D = Function(V0)  # Diffusion coefficient
     thermal_conductivity = Function(V0)
     specific_heat = Function(V0)
@@ -380,6 +405,47 @@ def define_variational_problem_heat_transfer(solve_heat_transfer, solve_transien
             FT += vT * Robin[1] * (T-Robin[2])*Robin[0]
         return FT
     return False, False
+
+
+def define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient, U, V, data):
+
+    if solve_laminar_flow is True:
+        print('Defining variation problem laminar flow')
+        nu = 0.01
+        # Define trial and test functions
+        u = TrialFunction(U)
+        p = TrialFunction(V)
+        v = TestFunction(U)
+        q = TestFunction(V)
+
+        u1 = Function(U)
+        u0 = Function(U)
+        p1 = Function(V)
+        # Define coefficients
+        k = Constant(dt)
+        f = Constant((0, 0, 0))
+
+        # Tentative velocity step
+        F1 = (1/k)*inner(u - u0, v)*dx + inner(grad(u0)*u0, v)*dx + \
+             nu*inner(grad(u), grad(v))*dx - inner(f, v)*dx
+        a1 = lhs(F1)
+        L1 = rhs(F1)
+
+        # Pressure update
+        a2 = inner(grad(p), grad(q))*dx
+        L2 = -(1/k)*div(u1)*q*dx
+
+        # Velocity update
+        a3 = inner(u, v)*dx
+        L3 = inner(u1, v)*dx - k*inner(grad(p1), v)*dx
+
+        # Assemble matrices
+        A1 = assemble(a1)
+        A2 = assemble(a2)
+        A3 = assemble(a3)
+        return A1, L1, A2, L2, A3, L3, u1, u0, p1
+
+    return False, False, False, False, False, False
 
 
 def update_D(mesh, volume_marker, D, T):
@@ -496,20 +562,25 @@ def initialise_post_processing(data, physic):
     return header
 
 
-def time_stepping(data, solve_heat_transfer, solve_diffusion, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, D, thermal_conductivity, F, f, bcs_c, FT, q, bcs_T, ds, dx, header_heat_transfers, header_tritium_diffusion, values_heat_transfers, values_tritium_diffusion):
+def time_stepping(data, solve_heat_transfer, solve_diffusion, solve_laminar_flow, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, D, thermal_conductivity, F, bcs_c, FT, q, bcs_T, ds, dx, header_heat_transfers, header_tritium_diffusion, values_heat_transfers, values_tritium_diffusion):
     # pbar = tqdm(total=100,bar_format='{desc}: {percentage:3.0f}%|{bar}|{n:.0f}/{total_fmt} [{elapsed}<{remaining}, ' '{rate_fmt}{postfix}]')
-    # ## Time-stepping
+    ## Time-stepping
     set_log_active(False)
     print('Time stepping')
     T = Function(V)
     c = Function(V)
+
     off_gassing = list()
     output_file = File(data["output_file"])
     t = 0
+    # Use amg preconditioner if available
+    prec = "amg" if has_krylov_solver_preconditioner("amg") else "default"
+    # Use nonzero guesses - essential for CG with non-symmetric BC
+    parameters['krylov_solver']['nonzero_initial_guess'] = True
 
     for n in range(num_steps):
         t += dt
-        print '{0}% {1} \r'.format(100*t/Time,'|'*int(50*t/Time)),
+        print '{0}% {1} \r'.format(100*t/Time, '|'*int(50*t/Time)),
 
         # Compute solution concentration
         if solve_diffusion is True:
@@ -529,13 +600,41 @@ def time_stepping(data, solve_heat_transfer, solve_diffusion, solve_diffusion_co
             bcs_T = update_bc(t, "heat_transfers")
             post_processing(data, T, "heat_transfers", header_heat_transfers, values_heat_transfers, t, ds, dx, thermal_conductivity, n0)
 
-        #Update the materials properties
+        # Compute solution velocity and pressure
+        if solve_laminar_flow is True:
+
+            # Compute tentative velocity step
+            begin("Computing tentative velocity")
+            b1 = assemble(L1)
+            [bc.apply(A1, b1) for bc in bcu]
+            solve(A1, u1.vector(), b1, "bicgstab", "default")
+            end()
+
+            # Pressure correction
+            begin("Computing pressure correction")
+            b2 = assemble(L2)
+            [bc.apply(A2, b2) for bc in bcp]
+            [bc.apply(p1.vector()) for bc in bcp]
+            solve(A2, p1.vector(), b2, "bicgstab", prec)
+            end()
+
+            # Velocity correction
+            begin("Computing velocity correction")
+            b3 = assemble(L3)
+            [bc.apply(A3, b3) for bc in bcu]
+            solve(A3, u1.vector(), b3, "bicgstab", "default")
+            end()
+            output_file << (u1,t)
+            output_file << (p1,t)
+            u0.assign(u1)
+
+        # Update the materials properties
         if solve_diffusion_coefficient_temperature_dependent is True and solve_heat_transfer is True and solve_diffusion is True:
             D = update_D(mesh, volume_marker, D, T)
     return
 
 
-def solving(data, solve_heat_transfer, solve_diffusion, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, D, thermal_conductivity, F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, ds, dx, n0):
+def solving(data, solve_heat_transfer, solve_diffusion, solve_laminar_flow, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, D, thermal_conductivity, F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, ds, dx, n0):
     values_heat_transfers = []
     values_tritium_diffusion = []
     header_heat_transfers = ''
@@ -546,7 +645,7 @@ def solving(data, solve_heat_transfer, solve_diffusion, solve_diffusion_coeffici
         header_tritium_diffusion = initialise_post_processing(data, "tritium_diffusion")
 
     if solve_transient is True:
-        time_stepping(data, solve_heat_transfer, solve_diffusion, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, D, thermal_conductivity, F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, ds, dx, header_heat_transfers, header_tritium_diffusion, values_heat_transfers, values_tritium_diffusion)
+        time_stepping(data, solve_heat_transfer, solve_diffusion, solve_laminar_flow, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, D, thermal_conductivity, F, bcs_c, FT, q, bcs_T, ds, dx, header_heat_transfers, header_tritium_diffusion, values_heat_transfers, values_tritium_diffusion)
     else:
         output_file = File(data["output_file"])
         if solve_heat_transfer is True:
@@ -565,13 +664,13 @@ if __name__ == "__main__":
 
     apreprovars = get_apreprovars(2)
     data = get_databases(apreprovars)  # This returns an object data=json.load()
-    solve_transient, solve_heat_transfer, solve_diffusion, solve_diffusion_coefficient_temperature_dependent, solve_with_decay = get_solvers(data)  # Gets the solvers
+    solve_transient, solve_heat_transfer, solve_laminar_flow, solve_diffusion, solve_diffusion_coefficient_temperature_dependent, solve_with_decay = get_solvers(data)  # Gets the solvers
 
     Time, num_steps, dt = get_solving_parameters(data)  # Gets the parameters (final time, time steps...)
 
     mesh, xdmf_in, n0 = define_mesh(data)
 
-    V, V0 = define_functionspaces(data)
+    V, V0, U = define_functionspaces(data)
 
     volume_marker, dx = get_volume_markers(mesh)
 
@@ -585,10 +684,15 @@ if __name__ == "__main__":
 
     bcs_T, Neumann_BC_T_diffusion, Robin_BC_T_diffusion = define_BC_heat_transfer(data, solve_heat_transfer, V, surface_marker, ds)
 
+    bcu, bcp = define_BC_laminar_flow(data,solve_laminar_flow, U, V, surface_marker, ds)
+
     D, thermal_conductivity, specific_heat, density = define_materials_properties(V0, data, volume_marker)
 
     F = define_variational_problem_diffusion(solve_diffusion, solve_transient, solve_with_decay, V, Neumann_BC_c_diffusion, Robin_BC_c_diffusion, Source_c_diffusion, data)
 
+
     FT = define_variational_problem_heat_transfer(solve_heat_transfer, solve_transient, V, Neumann_BC_T_diffusion, Robin_BC_T_diffusion, Source_T_diffusion, data)
 
-    solving(data, solve_heat_transfer, solve_diffusion, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, D, thermal_conductivity, F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, ds, dx, n0)
+    A1, L1, A2, L2, A3, L3, u1, u0, p1 = define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient, U, V, data)
+
+    solving(data, solve_heat_transfer, solve_diffusion, solve_laminar_flow, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, D, thermal_conductivity, F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, ds, dx, n0)
