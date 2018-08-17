@@ -19,7 +19,7 @@ import math
 def get_apreprovars(apreprovars):
     #return 'MOT_parameters_RCB.json'
     #return 'MOT_parameters_breeder_blankets.json'
-    return 'MOT_parameters_CFD.json'
+    return 'MOT_parameters_LiPb.json'
 
 
 def byteify(input):
@@ -626,7 +626,7 @@ def time_stepping(data, solve_heat_transfer, solve_diffusion, solve_laminar_flow
             solve(A3, u1.vector(), b3, "bicgstab", "default")
             end()
             output_file << (u1,t)
-            output_file << (p1,t)
+            #output_file << (p1,t)
             u0.assign(u1)
 
         # Update the materials properties
