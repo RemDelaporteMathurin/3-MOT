@@ -1,7 +1,4 @@
 import json
-from pprint import pprint
-import ast
-import argparse
 
 # run this script with the following commands in order to mesh from step files
 # trelis -nographics -batch mesher.py "json_input='MOT_parameters_breeder_blankets.json'"
@@ -126,15 +123,17 @@ def write_file(data):
     print('Cest fini')
 
 
+
+
 data = get_json_input(cubit.get_aprepro_vars())
-if type(data['structure_and_materials']['project_files'])==list and (data['structure_and_materials']['project_files'][0].endswith('.step') or data['structure_and_materials']['project_files'][0].endswith('.stp')):
+project_files = data['structure_and_materials']['project_files']
+if type(project_files)==list and all(file.endswith('.step') or file.endswith('.stp') for file in project_files):
     auto_mesh(data)
     write_file(data)
-else:
-    if data['structure_and_materials']['project_files'].endswith('.cub'):
-        print('Opening from project', data['structure_and_materials']['project_files'])
-        cubit.cmd('open "' + str(data['structure_and_materials']['project_files']) + '"')
-        write_file(data)
+elif project_files.endswith('.cub'):
+    print('Opening from project', project_files)
+    cubit.cmd('open "' + str(project_files) + '"')
+    write_file(data)
 
 
 #trailing empty line required by Trelis python 
