@@ -51,7 +51,13 @@
               "valuex":"0",
               "valuey":"0",
               "valuez":"0"
-            }
+            },
+            {
+                "surface":[4],
+                "valuex":"5e-5",
+                "valuey":"0",
+                "valuez":"0"
+              }
           ]
         },
         "boundary_conditions_pressure":{
@@ -59,10 +65,6 @@
             {
               "surface":[17],
               "value":0
-            },
-            {
-              "surface":[4],
-              "value":1
             }
           ]
         }
@@ -104,8 +106,8 @@
   },
   "solving_parameters":{
     "study":"transient",
-    "final_time":30.0, 
-    "number_of_time_steps":300 
+    "final_time":300.0, 
+    "number_of_time_steps":3000 
   },
 
   "post_processing":{

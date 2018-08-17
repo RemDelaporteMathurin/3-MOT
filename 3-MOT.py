@@ -412,7 +412,8 @@ def define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient,
 
     if solve_laminar_flow is True:
         print('Defining variation problem laminar flow')
-        nu = 0.01
+        mu = 1.875e-4
+        density = 11600
         # Define trial and test functions
         u = TrialFunction(U)
         p = TrialFunction(V)
@@ -427,8 +428,8 @@ def define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient,
         f = Constant((0, 0, 0))
 
         # Tentative velocity step
-        F1 = (1/k)*inner(u - u0, v)*dx + inner(grad(u0)*u0, v)*dx + \
-             nu*inner(grad(u), grad(v))*dx - inner(f, v)*dx
+        F1 = density*(1/k)*inner(u - u0, v)*dx + density*inner(grad(u0)*u0, v)*dx + \
+             mu*inner(grad(u), grad(v))*dx - inner(f, v)*dx
         a1 = lhs(F1)
         L1 = rhs(F1)
 
@@ -439,6 +440,7 @@ def define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient,
         # Velocity update
         a3 = inner(u, v)*dx
         L3 = inner(u1, v)*dx - k*inner(grad(p1), v)*dx
+
 
         # Assemble matrices
         A1 = assemble(a1)
