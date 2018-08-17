@@ -1,8 +1,10 @@
 import json
 
 # run this script with the following commands in order to mesh from step files
-# trelis -nographics -batch mesher.py "json_input='MOT_parameters_breeder_blankets.json'"
-# trelis mesher.py "json_input='MOT_parameters_breeder_blankets.json'"
+# without the Trelis GUI
+# trelis -nographics -batch mesher.py "json_input='input_parameters/breeder_blankets_parameters.json'"
+# with the Trelis GUI
+# trelis mesher.py "json_input='input_parameters/breeder_blankets_parameters.json'"
 
 
 def byteify(input):
