@@ -1,19 +1,15 @@
 {
     "quality" : 10,
     "scaling" : 0.001,
-    "mesh_file" : "mesh_and_markers_tube.xdmf",
+    "mesh_file" : "mesh_and_markers_lipb.xdmf",
 
     "output_file" : "solutionCFD.pvd",
 
     "structure_and_materials": {
-      "project_files":"tube.cub",
+      "project_files":"LiPbFlow.cub",
       "materials":[
         {
-          "volumes":[1],
-          "material":"steel"
-        },
-        {
-          "volumes":[2],
+          "volumes":[1,2,3],
           "material":"steel"
         }
       ]
@@ -51,24 +47,22 @@
         "boundary_conditions_velocity":{
           "dc":[
             {
-              "surface":[3,4,5,6,11,12,13,14,15,16],
+              "surface":[1,3,4,5,6,7,9,10,11,12,13,14,16,17,18,19,21],
               "valuex":"0",
               "valuey":"0",
               "valuez":"0"
-            },
-            {
-              "surface":[1],
-              "valuex":"0",
-              "valuey":"0",
-              "valuez":"1"
             }
           ]
         },
         "boundary_conditions_pressure":{
           "dc":[
             {
-              "surface":[2],
+              "surface":[8],
               "value":0
+            },
+            {
+              "surface":[2],
+              "value":8
             }
           ]
         }
