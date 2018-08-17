@@ -1,7 +1,7 @@
 {
-    "quality" : 3,
+    "quality" : 4,
     "scaling" : 0.001,
-    "mesh_file" : "mesh_and_markers_LiPb.xdmf",
+    "mesh_file" : "mesh_and_markers_lipb4.xdmf",
 
     "output_file" : "solutionCFD.pvd",
 
@@ -62,7 +62,7 @@
             },
             {
               "surface":[4],
-              "value":8
+              "value":1
             }
           ]
         }
