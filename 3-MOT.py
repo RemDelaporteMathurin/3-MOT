@@ -14,7 +14,7 @@ import inspect
 #from random import random, randint
 #from time import sleep
 import math
-from scipy import interpolate
+import scipy as scipy
 
 def get_apreprovars(apreprovars):
     #return 'MOT_parameters_RCB.json'
@@ -287,8 +287,6 @@ def calculate_D(T, material_id):
 
 
 
-from scipy import interpolate
-
 def calculate_thermal_conductivity(T, material_id):
 
     if material_id == "concrete":
@@ -313,7 +311,7 @@ def calculate_thermal_conductivity(T, material_id):
 
         raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
     
-    interpolated_object = interpolate.interp1d(temperature_k, thermal_conductivity) # this object could be created once on inititation to speed up the code
+    interpolated_object = scipy.interpolate.interp1d(temperature_k, thermal_conductivity) # this object could be created once on inititation to speed up the code
     return float(interpolated_object.__call__(T))
 
 
@@ -340,7 +338,7 @@ def calculate_specific_heat(T, material_id):
     
         raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
     
-    interpolated_object = interpolate.interp1d(temperature_k, specific_heat) # this object could be created once on inititation to speed up the code
+    interpolated_object = scipy.interpolate.interp1d(temperature_k, specific_heat) # this object could be created once on inititation to speed up the code
     return float(interpolated_object.__call__(T))
 
 
@@ -364,7 +362,7 @@ def calculate_density(T, material_id):
     else:
         raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
     
-    interpolated_object = interpolate.interp1d(temperature_k, density) # this object could be created once on inititation to speed up the code
+    interpolated_object = scipy.interpolate.interp1d(temperature_k, density) # this object could be created once on inititation to speed up the code
     return float(interpolated_object.__call__(T))
 
 
