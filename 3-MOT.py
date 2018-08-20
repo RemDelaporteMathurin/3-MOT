@@ -18,8 +18,8 @@ import scipy as scipy
 
 def get_apreprovars(apreprovars):
     #return 'MOT_parameters_RCB.json'
-    #return 'MOT_parameters_breeder_blankets.json'
-    return 'MOT_parameters_CFD.json'
+    return 'MOT_parameters_breeder_blankets.json'
+    #return 'MOT_parameters_CFD.json'
 
 
 def byteify(input):
@@ -37,7 +37,7 @@ def byteify(input):
 def get_databases(name_database):
     with open(name_database) as f:
         data = json.load(f)
-    data = byteify(data)
+    #data = byteify(data)
     return data
 
 

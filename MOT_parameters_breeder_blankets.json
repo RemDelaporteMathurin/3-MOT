@@ -35,6 +35,7 @@
       "solve_with_decay":1,
       "solve_tritium_diffusion":1,
       "solve_heat_transfer":1,
+      "solve_laminar_flow":0,
       "diffusion_coeff_temperature_dependent":0,
       "calculate_off_gassing":0,
       "heat_transfers":{
@@ -97,10 +98,20 @@
             "value":1e-2
           }
         ] 
+      },
+      "laminar_flow":{
+        "boundary_conditions_velocity":{
+          "dc":[
+          ]
+        },
+        "boundary_conditions_pressure":{
+          "dc":[
+          ]
+        }
       }
   },
   "solving_parameters":{
-    "study":"steady_state",
+    "study":"transient",
     "final_time":36000000000.0, 
     "number_of_time_steps":20 
   },
