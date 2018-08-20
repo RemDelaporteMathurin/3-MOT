@@ -1,7 +1,7 @@
 {
     "quality" : 10,
     "scaling" : 0.001,
-    "mesh_file" : "mesh_and_markers_breeder_blankets_quality5.xdmf",
+    "mesh_file" : "mesh_and_markers_breeder_blankets_quality10.xdmf",
 
     "output_file" : "solution.pvd",
     "field_file" : "field.xdmf",
@@ -33,7 +33,7 @@
 
    "physics": {
       "solve_with_decay":1,
-      "solve_tritium_diffusion":1,
+      "solve_tritium_diffusion":0,
       "solve_heat_transfer":1,
       "solve_laminar_flow":0,
       "diffusion_coeff_temperature_dependent":0,

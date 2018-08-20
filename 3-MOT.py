@@ -483,7 +483,7 @@ def define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient,
         A3 = assemble(a3)
         return A1, L1, A2, L2, A3, L3, u1, u0, p1
 
-    return False, False, False, False, False, False
+    return False, False, False, False, False, False, False, False, False
 
 
 def update_D(mesh, volume_marker, D, T):
@@ -508,14 +508,14 @@ def update_bc(t, physic):
 
     bcs = list()
     for DC in data['physics'][physic]['boundary_conditions']['dc']:
-        value_DC = Expression(DC['value'], t=t, degree=2)
+        value_DC = Expression(str(DC['value']), t=t, degree=2)
         if type(DC['surface']) == list:
             for surface in DC['surface']:
                 bci = DirichletBC(V, value_DC, surface_marker, surface)
                 bcs.append(bci)
         else:
             print(DC)
-            bci = DirichletBC(V, value_DC, surface_marker, DC['surface'])
+            bci = DirichletBC(V, float(value_DC), surface_marker, DC['surface'])
             bcs.append(bci)
     return bcs
 
@@ -609,7 +609,7 @@ def time_stepping(data, solve_heat_transfer, solve_diffusion, solve_laminar_flow
     c = Function(V)
 
     off_gassing = list()
-    output_file = File(data["output_file"])
+    output_file = File('solution.pvd')#File(data["output_file"])
     t = 0
     # Use amg preconditioner if available
     prec = "amg" if has_krylov_solver_preconditioner("amg") else "default"
