@@ -14,7 +14,7 @@ import inspect
 #from random import random, randint
 #from time import sleep
 import math
-import scipy as scipy
+from scipy import interpolate as scipy_interpolate
 
 def get_apreprovars(apreprovars):
     #return 'MOT_parameters_RCB.json'
@@ -311,7 +311,7 @@ def calculate_thermal_conductivity(T, material_id):
 
         raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
     
-    interpolated_object = scipy.interpolate.interp1d(temperature_k, thermal_conductivity) # this object could be created once on inititation to speed up the code
+    interpolated_object = scipy_interpolate.interp1d(temperature_k, thermal_conductivity) # this object could be created once on inititation to speed up the code
     return float(interpolated_object.__call__(T))
 
 
@@ -338,7 +338,7 @@ def calculate_specific_heat(T, material_id):
     
         raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
     
-    interpolated_object = scipy.interpolate.interp1d(temperature_k, specific_heat) # this object could be created once on inititation to speed up the code
+    interpolated_object = scipy_interpolate.interp1d(temperature_k, specific_heat) # this object could be created once on inititation to speed up the code
     return float(interpolated_object.__call__(T))
 
 
@@ -362,7 +362,7 @@ def calculate_density(T, material_id):
     else:
         raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
     
-    interpolated_object = scipy.interpolate.interp1d(temperature_k, density) # this object could be created once on inititation to speed up the code
+    interpolated_object = scipy_interpolate.interp1d(temperature_k, density) # this object could be created once on inititation to speed up the code
     return float(interpolated_object.__call__(T))
 
 
