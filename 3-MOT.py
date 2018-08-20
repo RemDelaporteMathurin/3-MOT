@@ -18,8 +18,8 @@ import math
 
 def get_apreprovars(apreprovars):
     #return 'MOT_parameters_RCB.json'
-    #return 'MOT_parameters_breeder_blankets.json'
-    return 'MOT_parameters_LiPb.json'
+    return 'MOT_parameters_breeder_blankets.json'
+    #return 'MOT_parameters_LiPb.json'
 
 
 def byteify(input):
@@ -377,7 +377,16 @@ def define_variational_problem_diffusion(solve_diffusion, solve_transient, solve
             F = 0
         for source in Source_c_diffusion:
             F += -vc*source[1]*source[0]
+        W_old = VectorFunctionSpace(Mesh('mesh_lipb4.xml'), 'P', 2)
+        w_old = Function(W_old, 'solutionCFD.xml')
+        File('test.pvd') << w_old
+        File('test_mesh.pvd') << Mesh('mesh_lipb4.xml')
+        File('test_mesh_bb.pvd') << mesh
+        W = VectorFunctionSpace(mesh, 'P', 2)
+        w = interpolate(w_old, W)
 
+
+        F += dot(w,grad(c))
         F += D*dot(grad(c), grad(vc))*dx + decay*c*vc*dx
         for Neumann in Neumann_BC_c_diffusion:
             F += vc * Neumann[1]*Neumann[0]
@@ -627,7 +636,8 @@ def time_stepping(data, solve_heat_transfer, solve_diffusion, solve_laminar_flow
             [bc.apply(A3, b3) for bc in bcu]
             solve(A3, u1.vector(), b3, "bicgstab", "default")
             end()
-            output_file << (u1,t)
+            output_file << u1
+            File('mesh_lipb4.xml') << mesh
             #output_file << (p1,t)
             u0.assign(u1)
 
