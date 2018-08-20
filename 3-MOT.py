@@ -14,7 +14,7 @@ import inspect
 #from random import random, randint
 #from time import sleep
 import math
-
+from scipy import interpolate
 
 def get_apreprovars(apreprovars):
     #return 'MOT_parameters_RCB.json'
