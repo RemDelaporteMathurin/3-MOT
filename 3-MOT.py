@@ -80,7 +80,7 @@ def get_solving_parameters(data):
     num_steps = 0
     dt = 0
     if solve_transient is True:
-        Time = float(data["solving_parameters"]['final_time'])  #60000*365.25*24*3600.0# final time 
+        Time = float(data["solving_parameters"]['final_time'])  #60000*365.25*24*3600.0# final time
         num_steps = data['solving_parameters']['number_of_time_steps']  #number of time steps
         dt = Time / num_steps  # time step size
     return Time, num_steps, dt
@@ -193,7 +193,7 @@ def define_BC_heat_transfer(data, solve_heat_transfer, V, surface_marker, ds):
 
         # Robins
         for Robin in data['physics']['heat_transfers']['boundary_conditions']['robin']:
-        
+
             if type(Robin['surface']) == list:
                 for surface in Robin['surface']:
                     Robin_BC_T_diffusion.append([ds(surface), Robin['hc_coeff'], Robin['t_amb']])
@@ -238,12 +238,12 @@ def define_initial_values(solve_heat_transfer, solve_diffusion, data, V):
     T_n = Function(V)
     if solve_diffusion is True:
         print('Defining initial values tritium diffusion')
-        iniC = Expression(str(data['physics']['tritium_diffusion']['initial_value']), degree=2) 
+        iniC = Expression(str(data['physics']['tritium_diffusion']['initial_value']), degree=2)
         c_n = interpolate(iniC, V)
     # #Temperature
     if solve_heat_transfer is True:
         print('Defining initial values heat transfer')
-        iniT = Expression(str(data['physics']['heat_transfers']['initial_value']), degree=2) 
+        iniT = Expression(str(data['physics']['heat_transfers']['initial_value']), degree=2)
         T_n = interpolate(iniT, V)
     return c_n, T_n
 
@@ -310,7 +310,7 @@ def calculate_thermal_conductivity(T, material_id):
     else:
 
         raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
-    
+
     interpolated_object = scipy_interpolate.interp1d(temperature_k, thermal_conductivity) # this object could be created once on inititation to speed up the code
     return float(interpolated_object.__call__(T))
 
@@ -335,9 +335,9 @@ def calculate_specific_heat(T, material_id):
         temperature_k =  [293.15, 323.15, 373.15, 423.15, 473.15, 523.15, 573.15, 623.15, 673.15, 723.15, 773.15, 823.15, 873.15]
         specific_heat =[439, 462, 490, 509, 523, 534, 546, 562, 584, 616, 660, 721, 800]
     else:
-    
+
         raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
-    
+
     interpolated_object = scipy_interpolate.interp1d(temperature_k, specific_heat) # this object could be created once on inititation to speed up the code
     return float(interpolated_object.__call__(T))
 
@@ -361,7 +361,7 @@ def calculate_density(T, material_id):
         density =       [7760,   7753,   7740,   7727,   7713,   7699,   7685,   7670,   7655,   7640,   7625,   7610, 7594]
     else:
         raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
-    
+
     interpolated_object = scipy_interpolate.interp1d(temperature_k, density) # this object could be created once on inititation to speed up the code
     return float(interpolated_object.__call__(T))
 
@@ -407,7 +407,7 @@ def define_variational_problem_diffusion(solve_diffusion, solve_transient, solve
             decay = np.log(2)/(12.33*365.25*24*3600)  # Tritium Decay constant [s-1]
         else:
             decay = 0
-    
+
         if solve_transient is True:
             F = ((c-c_n)/dt)*vc*dx
         else:
@@ -435,10 +435,10 @@ def define_variational_problem_heat_transfer(solve_heat_transfer, solve_transien
         else:
             FT = 0
         for source in Source_T_diffusion:
-            FT += -vT*source[1]*source[0]        
-        FT += thermal_conductivity*dot(grad(T), grad(vT))*dx  # This is the heat transfer equation         
+            FT += -vT*source[1]*source[0]
+        FT += thermal_conductivity*dot(grad(T), grad(vT))*dx  # This is the heat transfer equation
         for Neumann in Neumann_BC_T_diffusion:
-            FT += - vT * Neumann[1]*Neumann[0]    
+            FT += - vT * Neumann[1]*Neumann[0]
         for Robin in Robin_BC_T_diffusion:
             FT += vT * Robin[1] * (T-Robin[2])*Robin[0]
         return FT
@@ -449,7 +449,8 @@ def define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient,
 
     if solve_laminar_flow is True:
         print('Defining variation problem laminar flow')
-        nu = 0.01
+        mu = 1.875e-4
+        density = 11600
         # Define trial and test functions
         u = TrialFunction(U)
         p = TrialFunction(V)
@@ -464,8 +465,8 @@ def define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient,
         f = Constant((0, 0, 0))
 
         # Tentative velocity step
-        F1 = (1/k)*inner(u - u0, v)*dx + inner(grad(u0)*u0, v)*dx + \
-             nu*inner(grad(u), grad(v))*dx - inner(f, v)*dx
+        F1 = density*(1/k)*inner(u - u0, v)*dx + density*inner(grad(u0)*u0, v)*dx + \
+             mu*inner(grad(u), grad(v))*dx - inner(f, v)*dx
         a1 = lhs(F1)
         L1 = rhs(F1)
 
@@ -476,6 +477,7 @@ def define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient,
         # Velocity update
         a3 = inner(u, v)*dx
         L3 = inner(u1, v)*dx - k*inner(grad(p1), v)*dx
+
 
         # Assemble matrices
         A1 = assemble(a1)
@@ -540,17 +542,6 @@ def calculate_average_volume(volume, dx, solution, property):
     return average
 
 
-def calculate_minimum_volume(volume, dx, physic, solution, property):
-    minimum = solution.vector().min()
-    # minimum=assemble(min(solution)*dx(volume))
-    # print(minimum)
-    return minimum
-
-
-def calculate_maximum_volume(volume, dx, physic, solution, property):
-    return volume
-
-
 def write_in_file(header, values, output_file):
     with open(output_file, "w") as output:
         writer = csv.writer(output, lineterminator='\n')
@@ -561,7 +552,33 @@ def write_in_file(header, values, output_file):
     return
 
 
-def post_processing(data, solution, physic, header, values, t, ds, dx, property, n0):
+def calculate_minimum_volume(u, cell_function, subdomain_id, V):
+    dofmap = V.dofmap()
+    mesh = V.mesh()
+    mini = u.vector().max()
+    for cell in cells(mesh):
+        if cell_function[cell.index()] == subdomain_id:
+            dofs = dofmap.cell_dofs(cell.index())
+            for dof in dofs:
+                if u.vector()[dof][0] < mini:
+                    mini = u.vector()[dof][0]
+    return mini
+
+
+def calculate_maximum_volume(u, cell_function, subdomain_id, V):
+    dofmap = V.dofmap()
+    mesh = V.mesh()
+    maxi = u.vector().min()
+    for cell in cells(mesh):
+        if cell_function[cell.index()] == subdomain_id:
+            dofs = dofmap.cell_dofs(cell.index())
+            for dof in dofs:
+                if u.vector()[dof][0] > maxi:
+                    maxi = u.vector()[dof][0]
+    return maxi
+
+
+def post_processing(data, solution, physic, header, values, t, ds, dx, volume_marker, property, n0):
 
     output_file = data["post_processing"][physic]["output_file"]
     tab = []
@@ -571,11 +588,11 @@ def post_processing(data, solution, physic, header, values, t, ds, dx, property,
     for volume in data["post_processing"][physic]["volume_average"]:
         tab.append(calculate_average_volume(volume, dx, solution, property))
     for volume in data["post_processing"][physic]["volume_minimum"]:
-        tab.append(calculate_minimum_volume(volume, dx, physic, solution, property))
+        tab.append(calculate_minimum_volume(solution, volume_marker, volume, V))
     for volume in data["post_processing"][physic]["volume_maximum"]:
-        tab.append(calculate_maximum_volume(volume, dx, physic, solution, property))  
+        tab.append(calculate_maximum_volume(solution, volume_marker, volume, V))
     for expression in data["post_processing"][physic]["custom"]:
-        tab.append(eval(expression))  
+        tab.append(eval(expression))
     values.append(tab)
 
     write_in_file(header, values, output_file)
@@ -600,26 +617,28 @@ def initialise_post_processing(data, physic):
     return header
 
 
-def time_stepping(data, 
-                  solve_heat_transfer, 
-                  solve_diffusion, 
-                  solve_laminar_flow, 
-                  solve_diffusion_coefficient_temperature_dependent, 
-                  Time, 
-                  num_steps, 
-                  dt, 
-                  V, 
-                  D, 
-                  thermal_conductivity, 
-                  F, 
-                  bcs_c, 
-                  FT, 
-                  q, 
-                  bcs_T, 
-                  ds, dx, 
-                  header_heat_transfers, 
-                  header_tritium_diffusion, 
-                  values_heat_transfers, 
+def time_stepping(data,
+                  solve_heat_transfer,
+                  solve_diffusion,
+                  solve_laminar_flow,
+                  solve_diffusion_coefficient_temperature_dependent,
+                  Time,
+                  num_steps,
+                  dt,
+                  V,
+                  D,
+                  thermal_conductivity,
+                  F,
+                  bcs_c,
+                  FT,
+                  q,
+                  bcs_T,
+                  ds,
+                  dx,
+                  volume_marker,
+                  header_heat_transfers,
+                  header_tritium_diffusion,
+                  values_heat_transfers,
                   values_tritium_diffusion):
     # pbar = tqdm(total=100,bar_format='{desc}: {percentage:3.0f}%|{bar}|{n:.0f}/{total_fmt} [{elapsed}<{remaining}, ' '{rate_fmt}{postfix}]')
     ## Time-stepping
@@ -652,7 +671,7 @@ def time_stepping(data,
             output_file << (c, t)
             c_n.assign(c)
             bcs_c = update_bc(t, "tritium_diffusion")
-            post_processing(data, c, "tritium_diffusion", header_tritium_diffusion, values_tritium_diffusion, t, ds, dx, D, n0)
+            post_processing(data, c, "tritium_diffusion", header_tritium_diffusion, values_tritium_diffusion, t, ds, dx, volume_marker, D, n0)
 
         # Compute solution temperature
         if solve_heat_transfer is True:
@@ -661,7 +680,7 @@ def time_stepping(data,
             output_file << (T, t)
             T_n.assign(T)
             bcs_T = update_bc(t, "heat_transfers")
-            post_processing(data, T, "heat_transfers", header_heat_transfers, values_heat_transfers, t, ds, dx, thermal_conductivity, n0)
+            post_processing(data, T, "heat_transfers", header_heat_transfers, values_heat_transfers, t, ds, dx, volume_marker, thermal_conductivity, n0)
 
         # Compute solution velocity and pressure
         if solve_laminar_flow is True:
@@ -687,8 +706,8 @@ def time_stepping(data,
             [bc.apply(A3, b3) for bc in bcu]
             solve(A3, u1.vector(), b3, "bicgstab", "default")
             end()
-            output_file << (u1,t)
-            output_file << (p1,t)
+            output_file << u1
+            #output_file << (p1,t)
             u0.assign(u1)
 
         # Update the materials properties
@@ -697,26 +716,8 @@ def time_stepping(data,
     return
 
 
-def solving(data, 
-            solve_heat_transfer, 
-            solve_diffusion, 
-            solve_laminar_flow, 
-            solve_diffusion_coefficient_temperature_dependent, 
-            Time, 
-            num_steps, 
-            dt, 
-            V, 
-            D, 
-            thermal_conductivity, 
-            F, 
-            Source_c_diffusion, 
-            bcs_c, 
-            FT, 
-            Source_T_diffusion, 
-            bcs_T, 
-            ds, 
-            dx, 
-            n0):
+def solving(data,
+            solve_heat_transfer, solve_diffusion, solve_laminar_flow, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, D, thermal_conductivity, F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, ds, dx, volume_marker, n0):
     values_heat_transfers = []
     values_tritium_diffusion = []
     header_heat_transfers = ''
@@ -727,27 +728,28 @@ def solving(data,
         header_tritium_diffusion = initialise_post_processing(data, "tritium_diffusion")
 
     if solve_transient is True:
-        time_stepping(data=data, 
-                      solve_heat_transfer=solve_heat_transfer, 
-                      solve_diffusion=solve_diffusion, 
-                      solve_laminar_flow=solve_laminar_flow, 
-                      solve_diffusion_coefficient_temperature_dependent=solve_diffusion_coefficient_temperature_dependent, 
-                      Time=Time, 
-                      num_steps=num_steps, 
-                      dt=dt, 
-                      V=V, 
-                      D=D, 
-                      thermal_conductivity=thermal_conductivity, 
-                      F=F, 
-                      bcs_c=bcs_c, 
-                      FT=FT, 
-                      q=Source_T_diffusion, 
-                      bcs_T=bcs_T, 
-                      ds=ds, 
-                      dx=dx, 
-                      header_heat_transfers=header_heat_transfers, 
-                      header_tritium_diffusion=header_tritium_diffusion, 
-                      values_heat_transfers=values_heat_transfers, 
+        time_stepping(data=data,
+                      solve_heat_transfer=solve_heat_transfer,
+                      solve_diffusion=solve_diffusion,
+                      solve_laminar_flow=solve_laminar_flow,
+                      solve_diffusion_coefficient_temperature_dependent=solve_diffusion_coefficient_temperature_dependent,
+                      Time=Time,
+                      num_steps=num_steps,
+                      dt=dt,
+                      V=V,
+                      D=D,
+                      thermal_conductivity=thermal_conductivity,
+                      F=F,
+                      bcs_c=bcs_c,
+                      FT=FT,
+                      q=Source_T_diffusion,
+                      bcs_T=bcs_T,
+                      ds=ds,
+                      dx=dx,
+                      volume_marker=volume_marker,
+                      header_heat_transfers=header_heat_transfers,
+                      header_tritium_diffusion=header_tritium_diffusion,
+                      values_heat_transfers=values_heat_transfers,
                       values_tritium_diffusion=values_tritium_diffusion)
 
 
@@ -757,37 +759,13 @@ def solving(data,
             T = Function(V)
             solve(lhs(FT) == rhs(FT), T, bcs_T)
             output_file << (T, 0.0)
-            post_processing(data, T, "heat_transfers", header_heat_transfers, values_heat_transfers, 0, ds, dx, thermal_conductivity, n0)
+            post_processing(data, T, "heat_transfers", header_heat_transfers, values_heat_transfers, 0, ds, dx, volume_marker, thermal_conductivity, n0)
         if solve_diffusion is True:
           c = Function(V)
           solve(lhs(F) == rhs(F), c, bcs_c)
           output_file << (c, 0.0)
-          post_processing(data, c, "tritium_diffusion", header_tritium_diffusion, values_tritium_diffusion, 0, ds, dx, D, n0)
+          post_processing(data, c, "tritium_diffusion", header_tritium_diffusion, values_tritium_diffusion, 0, ds, dx, volume_marker, D, n0)
 
-def find_minimum(u, cell_function, subdomain_id, V):
-  dofmap = V.dofmap()
-  mesh = V.mesh()
-  mini = u.vector().max()
-  for cell in cells(mesh):
-    if cell_function[cell.index()] == subdomain_id:
-      dofs = dofmap.cell_dofs(cell.index())
-      for dof in dofs:
-        if u.vector()[dof] < mini:
-          mini = u.vector()[dof]
-  return mini
-
-
-def find_maximum(u, cell_function, subdomain_id, V):
-  dofmap = V.dofmap()
-  mesh = V.mesh()
-  maxi = u.vector().min()
-  for cell in cells(mesh):
-    if cell_function[cell.index()] == subdomain_id:
-      dofs = dofmap.cell_dofs(cell.index())
-      for dof in dofs:
-        if u.vector()[dof] > maxi:
-          maxi = u.vector()[dof]
-  return maxi
 
 
 if __name__ == "__main__":
@@ -820,16 +798,8 @@ if __name__ == "__main__":
 
     F = define_variational_problem_diffusion(solve_diffusion, solve_transient, solve_with_decay, V, Neumann_BC_c_diffusion, Robin_BC_c_diffusion, Source_c_diffusion, data)
 
-
     FT = define_variational_problem_heat_transfer(solve_heat_transfer, solve_transient, V, Neumann_BC_T_diffusion, Robin_BC_T_diffusion, Source_T_diffusion, data)
 
     A1, L1, A2, L2, A3, L3, u1, u0, p1 = define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient, U, V, data)
 
-    solving(data, solve_heat_transfer, solve_diffusion, solve_laminar_flow, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, D, thermal_conductivity, F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, ds, dx, n0)
-
-    print('all subdomains ' ,T_n.vector().min(), T_n.vector().max())
-    for material in data['structure_and_materials']['materials']:
-        for volume in material['volumes']:
-            mini = find_minimum(T_n, volume_marker, volume, V)
-            maxi = find_maximum(T_n, volume_marker, volume, V)
-            print(which_material_is_it(volume,data),material['material'], volume, mini, maxi)
+    solving(data, solve_heat_transfer, solve_diffusion, solve_laminar_flow, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, D, thermal_conductivity, F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, ds, dx, volume_marker, n0)
