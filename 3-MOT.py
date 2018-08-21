@@ -15,6 +15,9 @@ import inspect
 #from time import sleep
 import math
 from scipy import interpolate as scipy_interpolate
+from collections import Iterable
+
+from materials import calculate_D, calculate_thermal_conductivity, calculate_specific_heat, calculate_density
 
 def get_apreprovars(apreprovars):
     #return 'MOT_parameters_RCB.json'
@@ -103,7 +106,7 @@ def define_mesh(data):
 
 def define_functionspaces(data):
     print('Defining Functionspaces')
-    V = FunctionSpace(mesh, 'P', 2)  # FunctionSpace of the solution c
+    V = FunctionSpace(mesh, 'P', 1)  # FunctionSpace of the solution c
     V0 = FunctionSpace(mesh, 'DG', 0)  # FunctionSpace of the materials properties
     U = VectorFunctionSpace(mesh, 'P', 2) # FunctionSpace of velocity
     return V, V0, U
@@ -267,103 +270,6 @@ def define_source_terms(solve_heat_transfer, solve_diffusion, dx, data, sV):
     return Source_c_diffusion, Source_T_diffusion
 
 
-def calculate_D(T, material_id):
-    R = 8.314  # Perfect gas constant
-    k_B = 8.6e-5
-    if material_id == "concrete":  # Concrete
-        return 2e-6  # 7.3e-7*np.exp(-6.3e3/T)
-    elif material_id == "polymer":  # Polymer
-        return 2.0e-7*np.exp(-29000.0/R/T)
-    elif material_id == "steel":  # steel
-        return 7.3e-7*np.exp(-6.3e3/T)
-    elif material_id == "tungsten":
-        return 4.1e-7*np.exp(-0.39/k_B/T)
-    elif material_id == "eurofer":
-        return 8.1e-8*np.exp(-14470/R/T)
-    elif material_id == "lithium_lead":
-        return 2.5e-7*np.exp(-27000/R/T)
-    else:
-        raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
-
-
-
-def calculate_thermal_conductivity(T, material_id):
-
-    if material_id == "concrete":
-        return 0.5
-
-    elif material_id == "tungsten":
-       # temperature_c =       [20, 100, 200, 300, 400, 500, 600, 700]
-        temperature_k =        [293.15, 373.15, 473.15, 573.15, 673.15, 773.15, 873.15, 973.15]
-        thermal_conductivity = [172.8,  164.8,  155.5,  147.2,  139.8,  133.1,  127.2,  122.1]
-
-    elif material_id == "lithium_lead":
-        #temperature_c =       [20,     300,    350,    400,    450,    500,    550,    600,    650,    700]
-        temperature_k =        [293.15, 573.15, 623.15, 673.15, 723.15, 773.15, 823.15, 873.15, 923.15, 973.15]
-        thermal_conductivity = [7.69,   13.18,  14.16,  15.14,  16.12,  17.10,  18.08,  19.06,  20.04,  21.02]
-
-    elif material_id == "eurofer":
-        #temperature_c =       [20,     50,     100,    150,    200, 250, 300, 350, 400, 450, 500, 550,600]
-        temperature_k =        [293.15, 323.15, 373.15, 423.15, 473.15, 523.15, 573.15, 623.15, 673.15, 723.15, 773.15, 823.15, 873.15]
-        thermal_conductivity = [27.63,  28.73,  29.87,  30.32,  30.28,  29.95,  29.51,  29.10,  28.84,  28.82,  29.08,  29.62,  30.38]
-
-    else:
-
-        raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
-
-    interpolated_object = scipy_interpolate.interp1d(temperature_k, thermal_conductivity) # this object could be created once on inititation to speed up the code
-    return float(interpolated_object.__call__(T))
-
-
-def calculate_specific_heat(T, material_id):
-
-    if material_id == "concrete":
-        return 880
-
-    elif material_id == "tungsten":
-       # temperature_c = [20, 100, 200, 300, 400, 500, 600, 700]
-        temperature_k =[293.15, 373.15, 473.15, 573.15, 673.15, 773.15, 873.15, 973.15]
-        specific_heat = [129, 131.6, 134.7, 137.8, 140.9, 133.1, 127.2, 122.1]
-
-    elif material_id == "lithium_lead":
-        #temperature_c = [20, 300, 350, 400, 450, 500, 550, 600, 650, 700]
-        temperature_k = [293.15, 573.15, 623.15, 673.15, 723.15, 773.15, 823.15, 873.15, 923.15, 973.15]
-        specific_heat = [192, 190, 189, 189, 188, 188, 187, 187, 187, 186]
-
-    elif material_id == "eurofer":
-        #temperature_c = [20, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600]
-        temperature_k =  [293.15, 323.15, 373.15, 423.15, 473.15, 523.15, 573.15, 623.15, 673.15, 723.15, 773.15, 823.15, 873.15]
-        specific_heat =[439, 462, 490, 509, 523, 534, 546, 562, 584, 616, 660, 721, 800]
-    else:
-
-        raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
-
-    interpolated_object = scipy_interpolate.interp1d(temperature_k, specific_heat) # this object could be created once on inititation to speed up the code
-    return float(interpolated_object.__call__(T))
-
-
-def calculate_density(T, material_id):
-    if material_id == "concrete":
-        return 2400
-    elif material_id == "tungsten":
-       # temperature_c = [20, 100, 200, 300, 400, 500, 600, 700]
-        temperature_k =[293.15, 373.15, 473.15, 573.15, 673.15, 773.15, 873.15, 973.15]
-        density = [19298, 19279, 19254, 19229, 19205, 19178, 19152, 19125 ]
-
-    elif material_id == "lithium_lead":
-        #temperature_c = [20, 300, 350, 400, 450, 500, 550, 600, 650, 700]
-        temperature_k = [293.15, 573.15, 623.15, 673.15, 723.15, 773.15, 823.15, 873.15, 923.15, 973.15]
-        density = [10172, 9839, 9779, 9720, 9661, 9601, 9542, 9482, 9423, 9363]
-
-    elif material_id == "eurofer":
-        #temperature_c = [20, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600]
-        temperature_k = [293.15, 323.15, 373.15, 423.15, 473.15, 523.15, 573.15, 623.15, 673.15, 723.15, 773.15, 823.15, 873.15]
-        density =       [7760,   7753,   7740,   7727,   7713,   7699,   7685,   7670,   7655,   7640,   7625,   7610, 7594]
-    else:
-        raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
-
-    interpolated_object = scipy_interpolate.interp1d(temperature_k, density) # this object could be created once on inititation to speed up the code
-    return float(interpolated_object.__call__(T))
 
 
 def which_material_is_it(volume_id, data):
@@ -560,8 +466,13 @@ def calculate_minimum_volume(u, cell_function, subdomain_id, V):
         if cell_function[cell.index()] == subdomain_id:
             dofs = dofmap.cell_dofs(cell.index())
             for dof in dofs:
-                if u.vector()[dof][0] < mini:
-                    mini = u.vector()[dof][0]
+                try: 
+                    [dof][0]
+                    if u.vector()[dof][0] < mini:
+                        mini = u.vector()[dof][0]
+                except:
+                    if u.vector()[dof] < mini:
+                        mini = u.vector()[dof]
     return mini
 
 
@@ -573,8 +484,13 @@ def calculate_maximum_volume(u, cell_function, subdomain_id, V):
         if cell_function[cell.index()] == subdomain_id:
             dofs = dofmap.cell_dofs(cell.index())
             for dof in dofs:
-                if u.vector()[dof][0] > maxi:
-                    maxi = u.vector()[dof][0]
+                try:
+                    [dof][0]
+                    if u.vector()[dof][0] > maxi:
+                        maxi = u.vector()[dof][0]
+                except:
+                    if u.vector()[dof] > maxi:
+                        maxi = u.vector()[dof]
     return maxi
 
 
