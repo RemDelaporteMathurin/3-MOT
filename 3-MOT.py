@@ -15,6 +15,9 @@ import inspect
 #from time import sleep
 import math
 from scipy import interpolate as scipy_interpolate
+from collections import Iterable
+
+from materials import calculate_D, calculate_thermal_conductivity, calculate_specific_heat, calculate_density
 
 def get_apreprovars(apreprovars):
     #return 'MOT_parameters_RCB.json'
@@ -103,7 +106,7 @@ def define_mesh(data):
 
 def define_functionspaces(data):
     print('Defining Functionspaces')
-    V = FunctionSpace(mesh, 'P', 2)  # FunctionSpace of the solution c
+    V = FunctionSpace(mesh, 'P', 1)  # FunctionSpace of the solution c
     V0 = FunctionSpace(mesh, 'DG', 0)  # FunctionSpace of the materials properties
     U = VectorFunctionSpace(mesh, 'P', 2) # FunctionSpace of velocity
     return V, V0, U
@@ -203,6 +206,7 @@ def define_BC_heat_transfer(data, solve_heat_transfer, V, surface_marker, ds):
     return bcs_T, Neumann_BC_T_diffusion, Robin_BC_T_diffusion
 
 
+
 def define_BC_laminar_flow(data, solve_laminar_flow, U, V, surface_marker, ds):
     print("Defining BC laminar flow")
     bcu = []
@@ -222,6 +226,7 @@ def define_BC_laminar_flow(data, solve_laminar_flow, U, V, surface_marker, ds):
 
 
 def get_volume_markers(mesh):
+
     print('Marking the volumes')
     # read in the volume markers
     volume_marker_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
@@ -249,6 +254,7 @@ def define_initial_values(solve_heat_transfer, solve_diffusion, data, V):
 
 
 def define_source_terms(solve_heat_transfer, solve_diffusion, dx, data, sV):
+    print('Defining source terms')
     Source_c_diffusion = list()
     Source_T_diffusion = list()
 
@@ -260,7 +266,14 @@ def define_source_terms(solve_heat_transfer, solve_diffusion, dx, data, sV):
 
     if solve_heat_transfer is True:
         for source in data["physics"]["heat_transfers"]["source_terms"]:
-            value = Expression(str(source["value"]), t=0, degree=2)
+            if str(source["value"]).endswith('.xml'):
+                mesh_file = Mesh(source['mesh'])
+                V_file = FunctionSpace(mesh_file, 'DG', 0)
+                value_file = Function(V_file, source['value'])
+                value = interpolate(value_file, V)
+                File('vol_source.pvd') << value
+            else:
+                value = Expression(str(source["value"]), t=0, degree=2)
             for volume in source["volumes"]:
                 Source_T_diffusion.append([dx(volume), value])
 
@@ -271,7 +284,7 @@ def calculate_D(T, material_id):
     R = 8.314  # Perfect gas constant
     k_B = 8.6e-5
     if material_id == "concrete":  # Concrete
-        return 2e-6  # 7.3e-7*np.exp(-6.3e3/T)
+        return 2e-6
     elif material_id == "polymer":  # Polymer
         return 2.0e-7*np.exp(-29000.0/R/T)
     elif material_id == "steel":  # steel
@@ -560,8 +573,13 @@ def calculate_minimum_volume(u, cell_function, subdomain_id, V):
         if cell_function[cell.index()] == subdomain_id:
             dofs = dofmap.cell_dofs(cell.index())
             for dof in dofs:
-                if u.vector()[dof][0] < mini:
-                    mini = u.vector()[dof][0]
+                try:
+                    [dof][0]
+                    if u.vector()[dof][0] < mini:
+                        mini = u.vector()[dof][0]
+                except:
+                    if u.vector()[dof] < mini:
+                        mini = u.vector()[dof]
     return mini
 
 
@@ -573,8 +591,13 @@ def calculate_maximum_volume(u, cell_function, subdomain_id, V):
         if cell_function[cell.index()] == subdomain_id:
             dofs = dofmap.cell_dofs(cell.index())
             for dof in dofs:
-                if u.vector()[dof][0] > maxi:
-                    maxi = u.vector()[dof][0]
+                try:
+                    [dof][0]
+                    if u.vector()[dof][0] > maxi:
+                        maxi = u.vector()[dof][0]
+                except:
+                    if u.vector()[dof] > maxi:
+                        maxi = u.vector()[dof]
     return maxi
 
 
@@ -780,7 +803,7 @@ if __name__ == "__main__":
 
     V, V0, U = define_functionspaces(data)
 
-    volume_marker, dx = get_volume_markers(mesh)
+    volume_marker, dx = get_volume_markers(mesh, xdmf_in)
 
     c_n, T_n = define_initial_values(solve_heat_transfer, solve_diffusion, data, V)
 
