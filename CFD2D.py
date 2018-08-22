@@ -11,57 +11,82 @@ from __future__ import print_function
 from fenics import *
 import numpy as np
 
-T = 10.0           # final time
-num_steps = 500    # number of time steps
-dt = T / num_steps # time step size
-mu = 1             # kinematic viscosity
-rho = 1            # density
+T = 10.0            # final time
+num_steps = 500     # number of time steps
+dt = T / num_steps  # time step size
+mu = 1              # kinematic viscosity
+rho = 1             # density
 
 # Create mesh and define function spaces
 mesh = UnitSquareMesh(40, 40)
-V = VectorFunctionSpace(mesh, 'P', 2)
-Q = FunctionSpace(mesh, 'P', 1)
 
 tol = 1e-14
-class Omega_0(SubDomain):
+
+
+class Fluid(SubDomain):
     def inside(self, x, on_boundary):
         return x[1] <= 0.5 + tol
 
 
-class Omega_1(SubDomain):
+class Solid(SubDomain):
     def inside(self, x, on_boundary):
         return x[1] >= 0.5 - tol
 
 subdomains = MeshFunction("size_t", mesh, mesh.topology().dim())
 
-subdomain_0 = Omega_0()
-subdomain_1 = Omega_1()
-subdomain_0.mark(subdomains, 0)
-subdomain_1.mark(subdomains, 1)
+fluid = Fluid()
+solid = Solid()
+fluid.mark(subdomains, 0)
+solid.mark(subdomains, 1)
 
+
+fluid = SubMesh(mesh, subdomains, 0)
+W = FunctionSpace(mesh, 'P', 1)  # FS of temperature
+Q = FunctionSpace(fluid, 'P', 1)  # FS of pressure
+V = VectorFunctionSpace(fluid, 'P', 2)  # FS of velocity
 
 dx = Measure('dx', domain=mesh, subdomain_data=subdomains)
 
+dx_fluid = Measure('dx', domain=fluid)
 
 
+## Define boundaries demi-square
+
+class Inflow(SubDomain):
+    def inside(self, x, on_boundary):
+        return on_boundary and (abs(x[0]) < DOLFIN_EPS and x[1] < 0.5 - DOLFIN_EPS)
 
 
-# Define boundaries
-inflow  = 'near(x[0], 0)'
-outflow = 'near(x[0], 1)'
-walls   = 'near(x[1], 0) || near(x[1], 1)'
+class Outflow(SubDomain):
+    def inside(self, x, on_boundary):
+        return on_boundary and (abs(x[0]) < 1 - DOLFIN_EPS and x[1] < 0.5 - DOLFIN_EPS)
 
-# Define boundaries whole demi-square
-inflow  = 'near(x[0], 0) && x[1]<0.5'
-outflow = 'near(x[0], 1) && x[1]<0.5'
-walls   = 'near(x[1], 0) || near(x[1], 0.5) || near(x[1], 1) || (near(x[0], 0) && x[1]>0.5) || (near(x[0], 1) && x[1]>0.5) '
+
+class Walls(SubDomain):
+    def inside(self, x, on_boundary):
+        return on_boundary and (x[1] < 0 - DOLFIN_EPS or near(x[1], 0.5))
+
+inflow = Inflow()
+outflow = Outflow()
+walls = Walls()
+
+boundaries_fluid = MeshFunction("size_t", fluid, fluid.topology().dim() - 1)
+boundaries_fluid.set_all(0)
+inflow.mark(boundaries_fluid, 0)
+outflow.mark(boundaries_fluid, 1)
+walls.mark(boundaries_fluid, 2)
+
+ds = Measure('ds', domain=mesh)
+
+ds_fluid = Measure('ds', domain=fluid)
+inflow = 'near(x[0], 0)'
 
 # Define boundary conditions
-bcu_noslip  = DirichletBC(V, Constant((0, 0)), walls)
-bcp_inflow  = DirichletBC(Q, Constant(20), inflow)
+bcu_noslip = DirichletBC(V, Constant((0, 0)), walls)
+bcp_inflow = DirichletBC(Q, Constant(1), inflow)
 bcp_outflow = DirichletBC(Q, Constant(0), outflow)
 bcu = [bcu_noslip]
-bcp = [bcp_inflow, bcp_outflow]
+bcp = [bcp_inflow,bcp_outflow]
 
 # Define trial and test functions
 u = TrialFunction(V)
@@ -77,7 +102,7 @@ p_  = Function(Q)
 
 # Define expressions used in variational forms
 U   = 0.5*(u_n + u)
-n   = FacetNormal(mesh)
+n   = FacetNormal(fluid)
 f   = Constant((0, 0))
 k   = Constant(dt)
 mu  = Constant(mu)
@@ -91,22 +116,28 @@ def epsilon(u):
 def sigma(u, p):
     return 2*mu*epsilon(u) - p*Identity(len(u))
 
-# Define variational problem for step 1
-F1 = rho*dot((u - u_n) / k, v)*dx(0) + \
-     rho*dot(dot(u_n, nabla_grad(u_n)), v)*dx(0) \
-   + inner(sigma(U, p_n), epsilon(v))*dx(0) \
-   + dot(p_n*n, v)*ds - dot(mu*nabla_grad(U)*n, v)*ds \
-   - dot(f, v)*dx(0)
+
+print('Circonference fluid', assemble(1*ds_fluid))
+print('Circonference totale', assemble(1*ds))
+
+
+## Define variational problem for step 1
+F1 = rho*dot((u - u_n) / k, v)*dx_fluid + \
+     rho*dot(dot(u_n, nabla_grad(u_n)), v)*dx_fluid \
+   + inner(sigma(U, p_n), epsilon(v))*dx_fluid \
+   + dot(p_n*n, v)*ds_fluid \
+   - dot(mu*nabla_grad(U)*n, v)*ds_fluid \
+   - dot(f, v)*dx_fluid
 a1 = lhs(F1)
 L1 = rhs(F1)
 
 # Define variational problem for step 2
-a2 = dot(nabla_grad(p), nabla_grad(q))*dx(0)
-L2 = dot(nabla_grad(p_n), nabla_grad(q))*dx(0) - (1/k)*div(u_)*q*dx(0)
+a2 = dot(nabla_grad(p), nabla_grad(q))*dx_fluid
+L2 = dot(nabla_grad(p_n), nabla_grad(q))*dx_fluid - (1/k)*div(u_)*q*dx_fluid
 
 # Define variational problem for step 3
-a3 = dot(u, v)*dx(0)
-L3 = dot(u_, v)*dx(0) - k*dot(nabla_grad(p_ - p_n), v)*dx(0)
+a3 = dot(u, v)*dx_fluid
+L3 = dot(u_, v)*dx_fluid - k*dot(nabla_grad(p_ - p_n), v)*dx_fluid
 
 # Assemble matrices
 A1 = assemble(a1)
@@ -117,16 +148,19 @@ A3 = assemble(a3)
 [bc.apply(A1) for bc in bcu]
 [bc.apply(A2) for bc in bcp]
 
-T = TrialFunction(Q)
-T_n = Function(Q)
-vT = TestFunction(Q)
-FT = ((T-T_n)/k)*vT*dx  # Transient term
-FT += 0.1*dot(grad(T), grad(vT))*dx # Diffusion (conduction term) 
-FT += (dot(u_, grad(T)))*vT*dx(0) # Advection term
-T_ = Function(Q)
+
+# Define variational problem heat diffusion
+T = TrialFunction(W)
+T_n = Function(W)
+vT = TestFunction(W)
+FT = ((T-T_n)/k)*vT*dx   # Transient term
+FT += 0.1*dot(grad(T), grad(vT))*dx  # Diffusion (conduction term) 
+FT += (dot(u_, grad(T)))*vT*dx(0)  # Advection term
+T_ = Function(W)
 
 
-bcsT = [DirichletBC(Q, Constant(8), inflow)]
+
+bcsT = [DirichletBC(W, Constant(8), inflow)]
 output_file = File('solution.pvd')
 
 
@@ -142,12 +176,12 @@ for n in range(num_steps):
     b1 = assemble(L1)
     [bc.apply(b1) for bc in bcu]
     solve(A1, u_.vector(), b1)
-#
+
     # Step 2: Pressure correction step
     b2 = assemble(L2)
     [bc.apply(b2) for bc in bcp]
     solve(A2, p_.vector(), b2)
-#
+
     # Step 3: Velocity correction step
     b3 = assemble(L3)
     solve(A3, u_.vector(), b3)
@@ -157,7 +191,7 @@ for n in range(num_steps):
 
     output_file << (T_, t)
     output_file << (u_n, t)
+    output_file << (p_n, t)
     # Update previous solution
     u_n.assign(u_)
     p_n.assign(p_)
-    #print(u_n(0.5,0.75))
