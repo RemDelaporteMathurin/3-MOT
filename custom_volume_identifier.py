@@ -65,7 +65,7 @@ else:
     sys.exit()
 
 
-volumes_in_step_files = find_number_of_volumes_in_each_step_file(data["structure_and_materials"]['step_files'])
+volumes_in_step_files = find_number_of_volumes_in_each_step_file(data["structure_and_materials"]['project_files'])
 
 with open('volumes_in_step_file.json', 'w') as outfile:
     json.dump(volumes_in_step_files,outfile,indent=4)
@@ -74,6 +74,6 @@ with open('volumes_in_step_file.json', 'w') as outfile:
 print('script exectution time =',datetime.now() - startTime)
 print('script exectution time =',datetime.now() - startTime)
 
-print(data["structure_and_materials"]['step_files'])
+print(data["structure_and_materials"]['project_files'])
 
 
