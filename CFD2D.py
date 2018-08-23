@@ -54,17 +54,17 @@ dx_fluid = Measure('dx', domain=fluid)
 
 class Inflow(SubDomain):
     def inside(self, x, on_boundary):
-        return on_boundary and (abs(x[0]) < DOLFIN_EPS and x[1] < 0.5 - DOLFIN_EPS)
+        return on_boundary and x[0]  < DOLFIN_EPS and x[1] < 0.5 - DOLFIN_EPS
 
 
 class Outflow(SubDomain):
     def inside(self, x, on_boundary):
-        return on_boundary and (abs(x[0]) < 1 - DOLFIN_EPS and x[1] < 0.5 - DOLFIN_EPS)
+        return on_boundary and x[0] > 1 - DOLFIN_EPS and x[1] < 0.5 - DOLFIN_EPS
 
 
 class Walls(SubDomain):
     def inside(self, x, on_boundary):
-        return on_boundary and (x[1] < 0 - DOLFIN_EPS or near(x[1], 0.5))
+        return on_boundary and (near(x[1], 0) or near(x[1], 0.5))
 
 inflow = Inflow()
 outflow = Outflow()
@@ -79,12 +79,12 @@ walls.mark(boundaries_fluid, 2)
 ds = Measure('ds', domain=mesh)
 
 ds_fluid = Measure('ds', domain=fluid)
-inflow = 'near(x[0], 0)'
 
 # Define boundary conditions
 bcu_noslip = DirichletBC(V, Constant((0, 0)), walls)
-bcp_inflow = DirichletBC(Q, Constant(1), inflow)
+
 bcp_outflow = DirichletBC(Q, Constant(0), outflow)
+bcp_inflow = DirichletBC(Q, Constant(8), inflow)
 bcu = [bcu_noslip]
 bcp = [bcp_inflow,bcp_outflow]
 
@@ -154,8 +154,9 @@ T = TrialFunction(W)
 T_n = Function(W)
 vT = TestFunction(W)
 FT = ((T-T_n)/k)*vT*dx   # Transient term
-FT += 0.1*dot(grad(T), grad(vT))*dx  # Diffusion (conduction term) 
-FT += (dot(u_, grad(T)))*vT*dx(0)  # Advection term
+FT += 0.1*dot(grad(T), grad(vT))*dx(0)  # Diffusion (conduction term) in fluid
+FT += 1*dot(grad(T), grad(vT))*dx(1)  # Diffusion (conduction term) in solid
+FT += (dot(u_, grad(T)))*vT*dx(0)  # Advection term in fluid
 T_ = Function(W)
 
 
@@ -190,8 +191,8 @@ for n in range(num_steps):
     T_n.assign(T_)
 
     output_file << (T_, t)
-    output_file << (u_n, t)
-    output_file << (p_n, t)
+    output_file << (u_, t)
+    output_file << (p_, t)
     # Update previous solution
     u_n.assign(u_)
     p_n.assign(p_)
