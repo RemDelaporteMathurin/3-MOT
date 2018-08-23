@@ -62,7 +62,7 @@ def get_nodes_in_tets_volume_id_string(volumes):
             tets_in_volume += 1
             nodes = cubit.parse_cubit_list("node", "in tet " + str(tet))
             for node in nodes:
-                string_nodes += str(node) + ' '
+                string_nodes += str(node - 1) + ' '
             string_nodes += '\n          '
             string_ids += str(vol) + '\n          '
         print('Found ' + str(tets_in_volume) + ' tets in volume ' + str(vol))
@@ -95,7 +95,7 @@ def get_nodes_in_tris_surface_id_strings(surfaces):
             nodes = cubit.parse_cubit_list(entity, cmd)
             string_nodes += ''
             for node in nodes:
-                string_nodes += str(node) + ' '
+                string_nodes += str(node - 1) + ' '
             string_nodes += '\n          '
             string_ids+=str(surf)+'\n          '
     return string_nodes, string_ids
