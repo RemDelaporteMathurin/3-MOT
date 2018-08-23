@@ -8,7 +8,6 @@ import argparse
 import json
 import ast
 from pprint import pprint
-from materials_properties import *
 import inspect
 #from tqdm import *
 #from random import random, randint
@@ -17,11 +16,12 @@ import math
 from scipy import interpolate as scipy_interpolate
 from collections import Iterable
 
-from materials import calculate_D, calculate_thermal_conductivity, calculate_specific_heat, calculate_density
+from materials_properties import calculate_D, calculate_thermal_conductivity, calculate_specific_heat, calculate_density
 
 def get_apreprovars(apreprovars):
     #return 'MOT_parameters_RCB.json'
     return 'MOT_parameters_breeder_blankets.json'
+    #return 'MOT_parameters_breeder_blankets_connected.json'
     #return 'MOT_parameters_CFD.json'
 
 
@@ -803,7 +803,7 @@ if __name__ == "__main__":
 
     V, V0, U = define_functionspaces(data)
 
-    volume_marker, dx = get_volume_markers(mesh, xdmf_in)
+    volume_marker, dx = get_volume_markers(mesh)#, xdmf_in)
 
     c_n, T_n = define_initial_values(solve_heat_transfer, solve_diffusion, data, V)
 

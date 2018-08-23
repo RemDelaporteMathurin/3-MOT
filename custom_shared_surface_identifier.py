@@ -55,6 +55,7 @@ def find_shared_surfaces_between_coolant_and_structure(volumes_in_coolant_step_f
             if cubit.is_merged("surface", surface) == True:
                 list_of_shared_surfaces.append(surface)
                 cubit.cmd('highlight surface '+str(surface))
+                cubit.cmd('color surface '+str(surface) +' purple ')
         print('list_of_shared_surfaces',list_of_shared_surfaces)
         merged_surfaces_in_step_file_dict['shared_surfaces']=list_of_shared_surfaces
         list_of_merged_surfaces.append(merged_surfaces_in_step_file_dict)
@@ -81,7 +82,7 @@ def find_external_surfaces():
     for surface in surfaces_in_all_volumes:
         if cubit.is_merged("surface", surface) == True:
             list_of_merged_surfaces.append(surface)
-        else == False:
+        else:
             cubit.cmd('color surface '+str(surface)+ ' red')
             list_of_unmerged_surfaces.append(surface)
     print('list_of_external_surfaces',list_of_unmerged_surfaces)
@@ -106,7 +107,7 @@ else:
     sys.exit()
 
 
-volumes_in_structural_step_files = find_number_of_volumes_in_each_step_file(data["structure_and_materials"]['step_files'])
+volumes_in_structural_step_files = find_number_of_volumes_in_each_step_file(data["structure_and_materials"]['project_files'])
 
 with open('volumes_in_structural_step_file.json', 'w') as outfile:
     json.dump(volumes_in_structural_step_files,outfile)
@@ -119,7 +120,7 @@ with open('volumes_in_coolant_step_file.json', 'w') as outfile:
 
 cubit.cmd('vol all scale '+ str(data['scaling']))
 cubit.cmd('imprint body all')
-cubit.cmd('merge tolerance 1.e-9')
+cubit.cmd('merge tolerance 1.e-3')
 cubit.cmd('merge all')
 
 
