@@ -8,7 +8,7 @@
 - [Todo](#todo)
 
 
-# <a name="design-goals"></a>Design Goals
+# Design Goals
 3-MOT is a multi-physics solver using Finite Element Methods (FEM). 3-MOT relies on several softwares:
 
 - Trelis
