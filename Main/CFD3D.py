@@ -25,19 +25,41 @@ tol = 1e-14
 
 class Fluid(SubDomain):
     def inside(self, x, on_boundary):
-        return x[1] <= 0.5 + tol
+        return x[1] >= 0.25 and x[1] <= 0.75 and x[2] >= 0.25  and x[2] <= 0.75
 
 
-class Solid(SubDomain):
+class SolidTop(SubDomain):
     def inside(self, x, on_boundary):
-        return x[1] >= 0.5 - tol
+        return x[1] >= 0.75
+
+
+class SolidBottom(SubDomain):
+    def inside(self, x, on_boundary):
+        return x[1] <= 0.25
+
+
+class SolidLeft(SubDomain):
+    def inside(self, x, on_boundary):
+        return x[2] <= 0.25
+
+
+class SolidRight(SubDomain):
+    def inside(self, x, on_boundary):
+        return x[2] >= 0.75
 
 subdomains = MeshFunction("size_t", mesh, mesh.topology().dim())
 
 fluid = Fluid()
-solid = Solid()
+solidTop = SolidTop()
+solidBottom = SolidBottom()
+solidLeft = SolidLeft()
+solidRight = SolidRight()
+
 fluid.mark(subdomains, 0)
-solid.mark(subdomains, 1)
+solidTop.mark(subdomains, 1)
+solidBottom.mark(subdomains, 1)
+solidLeft.mark(subdomains, 1)
+solidRight.mark(subdomains, 1)
 
 
 fluid = SubMesh(mesh, subdomains, 0)
@@ -55,17 +77,17 @@ dx_fluid = Measure('dx', domain=fluid)
 
 class Inflow(SubDomain):
     def inside(self, x, on_boundary):
-        return on_boundary and near(x[0], 0) and x[1] < 0.5 - DOLFIN_EPS
+        return on_boundary and near(x[0], 0) and x[1] >= 0.25 and x[1] <= 0.75 and x[2] >= 0.25  and x[2] <= 0.75
 
 
 class Outflow(SubDomain):
     def inside(self, x, on_boundary):
-        return on_boundary and near(x[0], 1) and x[1] < 0.5 - DOLFIN_EPS
+        return on_boundary and near(x[0], 1) and x[1] >= 0.25 and x[1] <= 0.75 and x[2] >= 0.25  and x[2] <= 0.75 - DOLFIN_EPS
 
 
 class Walls(SubDomain):
     def inside(self, x, on_boundary):
-        return on_boundary and (near(x[1], 0) or near(x[1], 0.5) or near(x[2], 0) or near(x[2], 1))
+        return on_boundary and (near(x[1], 0.25) or near(x[1], 0.75) or near(x[2], 0.25) or near(x[2], 0.75))
 
 inflow = Inflow()
 outflow = Outflow()
