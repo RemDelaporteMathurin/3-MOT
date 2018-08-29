@@ -78,7 +78,7 @@ def get_solvers(data):
         solve_with_decay
 
 
-def get_solving_parameters(data):
+def get_solving_parameters(data, solve_transient):
     print('Getting the solving parameters')
     Time = 0
     num_steps = 0
@@ -134,15 +134,14 @@ def define_mesh(data, solve_laminar_flow):
 
     if solve_laminar_flow is True:
         domains_fluid = MeshFunction("size_t", mesh, mesh.topology().dim(), 0)
+        
         for volume in data["physics"]["laminar_flow"]["volumes"]:
-
             domains_fluid.array()[volume_marker.array() == volume] = 1
         mesh_fluid = SubMesh(mesh, domains_fluid, 1)
-        surface_markers_fluid = MeshFunction("size_t", mesh_fluid, mesh_fluid.topology().dim() - 1, 0)
+        surface_marker_fluid = MeshFunction("size_t", mesh_fluid, mesh_fluid.topology().dim() - 1, 0)
         print('Creating surface markers for SubMesh')
         vmap = mesh_fluid.data().array('parent_vertex_indices', 0)
 
-        #surface_markers_fluid = get_surface_marker(mesh_fluid, xdmf_in)
 
 
         #for i in range(0,len(surface_marker)):
@@ -155,13 +154,13 @@ def define_mesh(data, solve_laminar_flow):
         found = False
         debut = True
         #for submesh_facet in facets(mesh_fluid):
-        #print(len(surface_markers_fluid))
-        for index_fluid in range(0, len(surface_markers_fluid)):
+        #print(len(surface_marker_fluid))
+        for index_fluid in range(0, len(surface_marker_fluid)):
             submesh_facet = Facet(mesh_fluid, index_fluid)
             #print(submesh_facet.index())
             #print(submesh_facet.index())
-            #print(str(n/len(surface_markers_fluid)*100)+' %')
-            print(str(100*n/len(surface_markers_fluid))+' %', end='\r')
+            #print(str(n/len(surface_marker_fluid)*100)+' %')
+            print(str(100*n/len(surface_marker_fluid))+' %', end='\r')
             submesh_facet_vertices = vmap[submesh_facet.entities(0)]
             #print(set(submesh_facet_vertices))
             a = 0
@@ -174,7 +173,7 @@ def define_mesh(data, solve_laminar_flow):
                 
                 facet = Facet(mesh, index)
                 if set(facet.entities(0)) == set(submesh_facet_vertices):
-                    surface_markers_fluid.array()[submesh_facet.index()] = surface_marker.array()[facet.index()]
+                    surface_marker_fluid.array()[submesh_facet.index()] = surface_marker.array()[facet.index()]
                     #if surface_marker.array()[facet.index()] != 18446744073709551615:
                         #print('Found facet belonging to surface ' + str(surface_marker.array()[facet.index()]))
                     start = index - 3
@@ -197,7 +196,7 @@ def define_mesh(data, solve_laminar_flow):
                     a += 1
                     facet = Facet(mesh, index)
                     if set(facet.entities(0)) == set(submesh_facet_vertices):
-                        surface_markers_fluid.array()[submesh_facet.index()] = surface_marker.array()[facet.index()]
+                        surface_marker_fluid.array()[submesh_facet.index()] = surface_marker.array()[facet.index()]
                         #if surface_marker.array()[facet.index()] != 18446744073709551615:
                             #print('Found facet belonging to surface ' + str(surface_marker.array()[facet.index()]))
                         #start = index
@@ -211,14 +210,9 @@ def define_mesh(data, solve_laminar_flow):
                 #print('Non c"est bon il a trouve')
                 #print('Found facet belonging to surface ' + str(surface_marker.array()[facet.index()]))
             #print('Number of iterations', a)
-        print(n)
-
-        print('See the values of surface_markers_fluid')
-        for i in range(0,len(surface_markers_fluid)):
-            if surface_markers_fluid[i] != 18446744073709551615 and surface_markers_fluid[i] != 0:
-                print(surface_markers_fluid[i])
+        print(n, 'iterations')
         dx_fluid = Measure('dx', domain=mesh_fluid)
-        ds_fluid = Measure('ds', domain=mesh_fluid, subdomain_data=surface_markers_fluid)
+        ds_fluid = Measure('ds', domain=mesh_fluid, subdomain_data=surface_marker_fluid)
         n_fluid = FacetNormal(mesh_fluid)
     else:
         mesh_fluid = False
@@ -226,7 +220,7 @@ def define_mesh(data, solve_laminar_flow):
         ds_fluid = False
         n_fluid = False
 
-    return mesh, n0, volume_marker, dx, surface_marker, ds, mesh_fluid, dx_fluid, surface_markers_fluid, ds_fluid, n_fluid
+    return mesh, n0, volume_marker, dx, surface_marker, ds, mesh_fluid, dx_fluid, surface_marker_fluid, ds_fluid, n_fluid
 
 
             
@@ -240,12 +234,19 @@ def define_mesh(data, solve_laminar_flow):
             #
             #if found is False:
             #    print('Not found')
+
+
 def define_functionspaces(data, mesh, mesh_fluid):
     print('Defining Functionspaces')
     V = FunctionSpace(mesh, 'P', 1)  # FunctionSpace of the solution c and T
     V0 = FunctionSpace(mesh, 'DG', 0)  # FunctionSpace of the materials properties
-    Q = FunctionSpace(mesh_fluid, 'P', 1)  # Functionspace of pressure
-    U = VectorFunctionSpace(mesh_fluid, 'P', 2)  # FunctionSpace of velocity
+    if mesh_fluid is not False:
+        print()
+        Q = FunctionSpace(mesh_fluid, 'P', 1)  # Functionspace of pressure
+        U = VectorFunctionSpace(mesh_fluid, 'P', 2)  # FunctionSpace of velocity
+    else:
+        Q = FunctionSpace(mesh, 'P', 1)  # Functionspace of pressure
+        U = VectorFunctionSpace(mesh, 'P', 2)  # FunctionSpace of velocity        
     return V, V0, U, Q
 
 
@@ -501,7 +502,7 @@ def which_material_is_it(volume_id, data):
     return material_id
 
 
-def define_materials_properties(V0, data, volume_marker):
+def define_materials_properties(V0, data, volume_marker, solve_heat_transfer, solve_diffusion):
     # ##Defining materials properties
     print('Defining the materials properties')
 
@@ -524,7 +525,7 @@ def define_materials_properties(V0, data, volume_marker):
     return D, thermal_conductivity, specific_heat, density
 
 
-def define_variational_problem_diffusion(solve_diffusion, solve_transient, solve_with_decay, V, Neumann_BC_c_diffusion, Robin_BC_c_diffusion, Source_c_diffusion):
+def define_variational_problem_diffusion(solve_diffusion, solve_transient, dt, solve_with_decay, V, Neumann_BC_c_diffusion, Robin_BC_c_diffusion, Source_c_diffusion):
     if solve_diffusion is True:
         print('Defining variation problem tritium diffusion')
         c = TrialFunction(V)  # c is the tritium concentration
@@ -550,11 +551,12 @@ def define_variational_problem_diffusion(solve_diffusion, solve_transient, solve
     return False, False
 
 
-def define_variational_problem_heat_transfer(solve_heat_transfer, solve_transient, V, Neumann_BC_T_diffusion, Robin_BC_T_diffusion, Source_T_diffusion):
+def define_variational_problem_heat_transfer(solve_heat_transfer, solve_transient, dt, V, specific_heat, density, thermal_conductivity, Neumann_BC_T_diffusion, Robin_BC_T_diffusion, Source_T_diffusion):
 
     if solve_heat_transfer is True:
         print('Defining variation problem heat transfer')
         T = TrialFunction(V)  # T is the temperature
+        T_n = Function(V)
         vT = TestFunction(V)
         if solve_transient is True:
             FT = specific_heat*density*((T-T_n)/dt)*vT*dx
@@ -567,20 +569,23 @@ def define_variational_problem_heat_transfer(solve_heat_transfer, solve_transien
             FT += - vT * Neumann[1]*Neumann[0]
         for Robin in Robin_BC_T_diffusion:
             FT += vT * Robin[1] * (T-Robin[2])*Robin[0]
+        
+        u_ = Function(U)
+        FT += (dot(u_, grad(T)))*vT*dx(2)
+
         return FT
     return False, False
 
 
-def define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient, U, Q, dx_fluid, ds_fluid, n_fluid, bcu, bcp):
+def define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient, U, Q, dx_fluid, ds_fluid, n_fluid, bcu, bcp, dt):
 
     if solve_laminar_flow is True:
         print('Defining variation problem laminar flow')
-        mu = 1.875e-4
-        density = 11600
+        mu = 1 #1.875e-4
+        rho = 1# 11600
         # Define strain-rate tensor
         def epsilon(u):
             return sym(nabla_grad(u))
-
         # Define stress tensor
         def sigma(u, p):
             return 2*mu*epsilon(u) - p*Identity(len(u))
@@ -601,25 +606,22 @@ def define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient,
         f   = Constant((0, 0, 0))
         k   = Constant(dt)
         mu  = Constant(mu)
-        density = Constant(density)
+        rho = Constant(rho)
 
-        ## Define variational problem for step 1
-        F1 = density*dot((u - u_n) , v)*dx_fluid + \
-             density*dot(dot(u_n, nabla_grad(u_n)), v)*dx_fluid \
+        #### Define variational problem for step 1
+        F1 = rho*dot((u - u_n) / k, v)*dx_fluid \
+           + rho*dot(dot(u_n, nabla_grad(u_n)), v)*dx_fluid \
            + inner(sigma(U, p_n), epsilon(v))*dx_fluid \
-           + dot(p_n*n_fluid, v)*ds_fluid \
-           - dot(mu*nabla_grad(U)*n_fluid, v)*ds_fluid \
+           + dot(p_n*n_fluid, v)*ds_fluid - dot(mu*nabla_grad(U)*n_fluid, v)*ds_fluid \
            - dot(f, v)*dx_fluid
         a1 = lhs(F1)
         L1 = rhs(F1)
-
         # Define variational problem for step 2
         a2 = dot(nabla_grad(p), nabla_grad(q))*dx_fluid
         L2 = dot(nabla_grad(p_n), nabla_grad(q))*dx_fluid - (1/k)*div(u_)*q*dx_fluid
-
         # Define variational problem for step 3
         a3 = dot(u, v)*dx_fluid
-        L3 = dot(u_, v)*dx_fluid - dot(nabla_grad(p_ - p_n), v)*dx_fluid      
+        L3 = dot(u_, v)*dx_fluid - k*dot(nabla_grad(p_ - p_n), v)*dx_fluid      
         # Assemble matrices
         A1 = assemble(a1)
         A2 = assemble(a2)
@@ -628,9 +630,9 @@ def define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient,
         # Apply boundary conditions to matrices
         [bc.apply(A1) for bc in bcu]
         [bc.apply(A2) for bc in bcp]
-        return A1, L1, A2, L2, A3, L3
 
-    return False, False, False, False, False, False, False, False, False
+        return A1, L1, A2, L2, A3, L3
+    return False, False, False, False, False, False
 
 
 def update_D(mesh, volume_marker, D, T):
@@ -667,7 +669,7 @@ def update_bc(t, physic):
     return bcs
 
 
-def update_source_term(t, physic):
+def update_source_term(t, physic, Source_c_diffusion, Source_T_diffusion):
     if physic == "tritium_diffusion":
         for source in Source_c_diffusion:
             source[1].t = t
@@ -781,15 +783,19 @@ def time_stepping(data,
                   num_steps,
                   dt,
                   V,
+                  U,
+                  Q,
                   D,
                   thermal_conductivity,
                   F,
                   bcs_c,
                   FT,
-                  q,
                   bcs_T,
+                  A1, L1, A2, L2, A3, L3,
+                  bcu, bcp,
                   ds,
                   dx,
+                  Source_c_diffusion, Source_T_diffusion,
                   volume_marker,
                   header_heat_transfers,
                   header_tritium_diffusion,
@@ -802,8 +808,12 @@ def time_stepping(data,
     except:
         print('active log not available')
     print('Time stepping')
+
+
     T = Function(V)
+    T_n = Function(V)
     c = Function(V)
+    c_n = Function(V)
     u_n = Function(U)
     u_  = Function(U)
     p_n = Function(Q)
@@ -812,66 +822,123 @@ def time_stepping(data,
     output_file = File(data["output_file"])
     t = 0
     # Use amg preconditioner if available
-    prec = "amg" if has_krylov_solver_preconditioner("amg") else "default"
+    #prec = "amg" if has_krylov_solver_preconditioner("amg") else "default"
     # Use nonzero guesses - essential for CG with non-symmetric BC
-    parameters['krylov_solver']['nonzero_initial_guess'] = True
+    #parameters['krylov_solver']['nonzero_initial_guess'] = True
+    #mu = 1 #1.875e-4
+    #rho = 1# 11600
 
+    ### Define trial and test functions
+    #u = TrialFunction(U)
+    #v = TestFunction(U)
+    #p = TrialFunction(Q)
+    #q = TestFunction(Q)
+    #T = Function(V)
+    #T_n = Function(V)
+    #c = Function(V)
+    #c_n = Function(V)
+    #u_n = Function(U)
+    #u_  = Function(U)
+    #p_n = Function(Q)
+    #p_  = Function(Q)
+    ##output_file = File(data["output_file"])
+    ##t = 0
+    #### Define expressions used in variational forms
+    #U   = 0.5*(u_n + u)
+    #f   = Constant((0, 0, 0))
+    #k   = Constant(dt)
+    #mu  = Constant(mu)
+    #rho = Constant(rho)
+    ###### Define variational problem for step 1
+    #F1 = rho*dot((u - u_n) / k, v)*dx_fluid \
+    #   + rho*dot(dot(u_n, nabla_grad(u_n)), v)*dx_fluid \
+    #   + inner(sigma(U, p_n), epsilon(v))*dx_fluid \
+    #   + dot(p_n*n_fluid, v)*ds_fluid - dot(mu*nabla_grad(U)*n_fluid, v)*ds_fluid \
+    #   - dot(f, v)*dx_fluid
+    ##a1 = lhs(F1)
+    #L1 = rhs(F1)
+
+    ## Define variational problem for step 2
+    #a2 = dot(nabla_grad(p), nabla_grad(q))*dx_fluid
+    #L2 = dot(nabla_grad(p_n), nabla_grad(q))*dx_fluid - (1/k)*div(u_)*q*dx_fluid
+    ## Define variational problem for step 3
+    #a3 = dot(u, v)*dx_fluid
+    #L3 = dot(u_, v)*dx_fluid - k*dot(nabla_grad(p_ - p_n), v)*dx_fluid      
+    rho = 1
+    mu = 1
+    ### Define strain-rate tensor
+    def epsilon(u):
+        return sym(nabla_grad(u))
+    ## Define stress tensor
+    def sigma(u, p):
+        return 2*mu*epsilon(u) - p*Identity(len(u))
+    k = dt
+    A1, L1, A2, L2, A3, L3 = define_variational_problem_laminar_flow(True, True, U, Q, dx_fluid, ds_fluid, n_fluid, bcu, bcp, dt)
+
+    ###### Define variational problem for step 1
+    #F1 = rho*dot((u - u_n) / k, v)*dx_fluid \
+    #   + rho*dot(dot(u_n, nabla_grad(u_n)), v)*dx_fluid \
+    #   + inner(sigma(U, p_n), epsilon(v))*dx_fluid \
+    #   + dot(p_n*n_fluid, v)*ds_fluid - dot(mu*nabla_grad(U)*n_fluid, v)*ds_fluid \
+    #   - dot(f, v)*dx_fluid
+    ##a1 = lhs(F1)
+    #L1 = rhs(F1)
     for n in range(num_steps):
         t += dt
-
-        print('{0}% {1} \r'.format(100*t/Time, '|'*int(50*t/Time)),)
-
-
-        # Compute solution concentration
-        if solve_diffusion is True:
-            update_source_term(t, 'tritium_diffusion')
-            solve(lhs(F) == rhs(F), c, bcs_c)
-            output_file << (c, t)
-            c_n.assign(c)
-            bcs_c = update_bc(t, "tritium_diffusion")
-            post_processing(data, c, "tritium_diffusion", header_tritium_diffusion, values_tritium_diffusion, t, ds, dx, volume_marker, D, n0)
-
-        # Compute solution temperature
-        if solve_heat_transfer is True:
-            update_source_term(t, 'heat_transfers')
-            solve(lhs(FT) == rhs(FT), T, bcs_T)
-            output_file << (T, t)
-            T_n.assign(T)
-            bcs_T = update_bc(t, "heat_transfers")
-            post_processing(data, T, "heat_transfers", header_heat_transfers, values_heat_transfers, t, ds, dx, volume_marker, thermal_conductivity, n0)
-
+        print(100*t/Time, end='\r')
         # Compute solution velocity and pressure
         if solve_laminar_flow is True:
-
             # Step 1: Tentative velocity step
             b1 = assemble(L1)
             [bc.apply(b1) for bc in bcu]
-            solve(A1, u_.vector(), b1)          
+            solve(A1, u_.vector(), b1)
+            print(u_(0,0,0))
             # Step 2: Pressure correction step
             b2 = assemble(L2)
             [bc.apply(b2) for bc in bcp]
-            solve(A2, p_.vector(), b2)          
+            solve(A2, p_.vector(), b2)
+            print(p_(0,0,0))
             # Step 3: Velocity correction step
             b3 = assemble(L3)
             solve(A3, u_.vector(), b3)
+            print(u_(0,0,0))
             output_file << (u_, t)
             output_file << (p_, t)
             # Update previous solution
             u_n.assign(u_)
             p_n.assign(p_)
-
+        
+        # Compute solution concentration
+        if solve_diffusion is True:
+            update_source_term(t, 'tritium_diffusion', Source_c_diffusion, Source_T_diffusion)
+            solve(lhs(F) == rhs(F), c, bcs_c)
+            output_file << (c, t)
+            c_n.assign(c)
+            bcs_c = update_bc(t, "tritium_diffusion")
+            post_processing(data, c, "tritium_diffusion", header_tritium_diffusion, values_tritium_diffusion, t, ds, dx, volume_marker, D, n0)
+        # Compute solution temperature
+        if solve_heat_transfer is True:
+            update_source_term(t, 'heat_transfers', Source_c_diffusion, Source_T_diffusion)
+            solve(lhs(FT) == rhs(FT), T, bcs_T)
+            output_file << (T, t)
+            T_n.assign(T)
+            bcs_T = update_bc(t, "heat_transfers")
+            post_processing(data, T, "heat_transfers", header_heat_transfers, values_heat_transfers, t, ds, dx, volume_marker, thermal_conductivity, n0)
         # Update the materials properties
         if solve_diffusion_coefficient_temperature_dependent is True and solve_heat_transfer is True and solve_diffusion is True:
             D = update_D(mesh, volume_marker, D, T)
     return
 
 
-def solving(data,
-            solve_heat_transfer, solve_diffusion, solve_laminar_flow, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, D, thermal_conductivity, F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, ds, dx, volume_marker, n0):
+def solving(data, 
+            solve_transient,
+            solve_heat_transfer, solve_diffusion, solve_laminar_flow, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, U, Q, D, thermal_conductivity, F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, A1, L1, A2, L2, A3, L3, bcu, bcp,  ds, dx, volume_marker, n0):
     values_heat_transfers = []
     values_tritium_diffusion = []
     header_heat_transfers = ''
     header_tritium_diffusion = ''
+    print('Solving')
+    print(L1)
     if solve_heat_transfer is True:
         header_heat_transfers = initialise_post_processing(data, "heat_transfers")
     if solve_diffusion is True:
@@ -887,13 +954,23 @@ def solving(data,
                       num_steps=num_steps,
                       dt=dt,
                       V=V,
+                      U=U,
+                      Q=Q,
                       D=D,
                       thermal_conductivity=thermal_conductivity,
                       F=F,
                       bcs_c=bcs_c,
                       FT=FT,
-                      q=Source_T_diffusion,
+                      Source_T_diffusion=Source_T_diffusion,
+                      Source_c_diffusion=Source_c_diffusion,
                       bcs_T=bcs_T,
+                      A1=A1, 
+                      L1=L1, 
+                      A2=A2, 
+                      L2=L2, 
+                      A3=A3, 
+                      L3=L3, 
+                      bcu=bcu, bcp=bcp,
                       ds=ds,
                       dx=dx,
                       volume_marker=volume_marker,
@@ -927,9 +1004,9 @@ if __name__ == "__main__":
     
     solve_transient, solve_heat_transfer, solve_laminar_flow, solve_diffusion, solve_diffusion_coefficient_temperature_dependent, solve_with_decay = get_solvers(data)  # Gets the solvers
 
-    Time, num_steps, dt = get_solving_parameters(data)  # Gets the parameters (final time, time steps...)
+    Time, num_steps, dt = get_solving_parameters(data, solve_transient)  # Gets the parameters (final time, time steps...)
 
-    mesh, n0, volume_marker, dx, surface_marker, ds, mesh_fluid, dx_fluid, surfaces_markers_fluid, ds_fluid, n_fluid = define_mesh(data, solve_laminar_flow)
+    mesh, n0, volume_marker, dx, surface_marker, ds, mesh_fluid, dx_fluid, surface_marker_fluid, ds_fluid, n_fluid = define_mesh(data, solve_laminar_flow)
 
     V, V0, U, Q = define_functionspaces(data, mesh, mesh_fluid)
 
@@ -941,14 +1018,28 @@ if __name__ == "__main__":
 
     bcs_T, Neumann_BC_T_diffusion, Robin_BC_T_diffusion = define_BC_heat_transfer(data, solve_heat_transfer, V, surface_marker, ds)
 
-    bcu, bcp = define_BC_laminar_flow(data, solve_laminar_flow, U, Q, surfaces_markers_fluid)
+    bcu, bcp = define_BC_laminar_flow(data, solve_laminar_flow, U, Q, surface_marker_fluid)
 
-    D, thermal_conductivity, specific_heat, density = define_materials_properties(V0, data, volume_marker)
+    D, thermal_conductivity, specific_heat, density = define_materials_properties(V0, data, volume_marker, solve_heat_transfer, solve_diffusion)
+    
+    F = define_variational_problem_diffusion(solve_diffusion, solve_transient, dt, solve_with_decay, V, Neumann_BC_c_diffusion, Robin_BC_c_diffusion, Source_c_diffusion)
 
-    F = define_variational_problem_diffusion(solve_diffusion, solve_transient, solve_with_decay, V, Neumann_BC_c_diffusion, Robin_BC_c_diffusion, Source_c_diffusion)
+    FT = define_variational_problem_heat_transfer(solve_heat_transfer, solve_transient, dt, V, specific_heat, density, thermal_conductivity, Neumann_BC_T_diffusion, Robin_BC_T_diffusion, Source_T_diffusion)
 
-    FT = define_variational_problem_heat_transfer(solve_heat_transfer, solve_transient, V, Neumann_BC_T_diffusion, Robin_BC_T_diffusion, Source_T_diffusion)
+    u = TrialFunction(U)
+    v = TestFunction(U)
+    p = TrialFunction(Q)
+    q = TestFunction(Q)
+    T = Function(V)
+    T_n = Function(V)
+    c = Function(V)
+    c_n = Function(V)
+    u_n = Function(U)
+    u_  = Function(U)
+    p_n = Function(Q)
+    p_  = Function(Q)
+    A1, L1, A2, L2, A3, L3 = define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient, U, Q, dx_fluid, ds_fluid, n_fluid, bcu, bcp, dt)
 
-    A1, L1, A2, L2, A3, L3 = define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient, U, Q, dx_fluid, ds_fluid, n_fluid, bcu, bcp)
-
-    solving(data, solve_heat_transfer, solve_diffusion, solve_laminar_flow, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, D, thermal_conductivity, F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, ds, dx, volume_marker, n0)
+    
+    solving(data, solve_transient, solve_heat_transfer, solve_diffusion, solve_laminar_flow, solve_diffusion_coefficient_temperature_dependent, Time, num_steps, dt, V, U, Q, D, thermal_conductivity, F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, A1, L1, A2, L2, A3, L3, bcu, bcp, ds, dx, volume_marker, n0)
+    

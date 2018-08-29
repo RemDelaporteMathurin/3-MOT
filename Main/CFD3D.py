@@ -11,7 +11,7 @@ from __future__ import print_function
 from fenics import *
 import numpy as np
 
-T = 10.0            # final time
+T = 100.0            # final time
 num_steps = 500     # number of time steps
 dt = T / num_steps  # time step size
 mu = 1              # kinematic viscosity
@@ -77,17 +77,17 @@ dx_fluid = Measure('dx', domain=fluid)
 
 class Inflow(SubDomain):
     def inside(self, x, on_boundary):
-        return on_boundary and near(x[0], 0) and x[1] >= 0.25 and x[1] <= 0.75 and x[2] >= 0.25  and x[2] <= 0.75
+        return on_boundary and near(x[0], 0) and x[1] >= 0.2 and x[1] <= 0.8 and x[2] >= 0.2  and x[2] <= 0.8
 
 
 class Outflow(SubDomain):
     def inside(self, x, on_boundary):
-        return on_boundary and near(x[0], 1) and x[1] >= 0.25 and x[1] <= 0.75 and x[2] >= 0.25  and x[2] <= 0.75 - DOLFIN_EPS
+        return on_boundary and near(x[0], 1) and x[1] >= 0.2 and x[1] <= 0.8 and x[2] >= 0.2  and x[2] <= 0.8 - DOLFIN_EPS
 
 
 class Walls(SubDomain):
     def inside(self, x, on_boundary):
-        return on_boundary and (near(x[1], 0.25) or near(x[1], 0.75) or near(x[2], 0.25) or near(x[2], 0.75))
+        return on_boundary and (near(x[1], 0.2) or near(x[1], 0.8) or near(x[2], 0.2) or near(x[2], 0.8))
 
 inflow = Inflow()
 outflow = Outflow()
@@ -140,16 +140,15 @@ def sigma(u, p):
     return 2*mu*epsilon(u) - p*Identity(len(u))
 
 
-print('Circonference fluid', assemble(1*ds_fluid))
-print('Circonference totale', assemble(1*ds))
+print('Area fluid', assemble(1*ds_fluid))
+print('Area total', assemble(1*ds))
 
 
 ## Define variational problem for step 1
-F1 = rho*dot((u - u_n) / k, v)*dx_fluid + \
-     rho*dot(dot(u_n, nabla_grad(u_n)), v)*dx_fluid \
+F1 = rho*dot((u - u_n) / k, v)*dx_fluid \
+   + rho*dot(dot(u_n, nabla_grad(u_n)), v)*dx_fluid \
    + inner(sigma(U, p_n), epsilon(v))*dx_fluid \
-   + dot(p_n*n, v)*ds_fluid \
-   - dot(mu*nabla_grad(U)*n, v)*ds_fluid \
+   + dot(p_n*n, v)*ds_fluid - dot(mu*nabla_grad(U)*n, v)*ds_fluid \
    - dot(f, v)*dx_fluid
 a1 = lhs(F1)
 L1 = rhs(F1)
@@ -177,15 +176,15 @@ T = TrialFunction(W)
 T_n = Function(W)
 vT = TestFunction(W)
 FT = ((T-T_n)/k)*vT*dx   # Transient term
-FT += 0.1*dot(grad(T), grad(vT))*dx(0)  # Diffusion (conduction term) in fluid
-FT += 1*dot(grad(T), grad(vT))*dx(1)  # Diffusion (conduction term) in solid
+FT += 0.01*dot(grad(T), grad(vT))*dx(0)  # Diffusion (conduction term) in fluid
+FT += 0.001*dot(grad(T), grad(vT))*dx(1)  # Diffusion (conduction term) in solid
 FT += (dot(u_, grad(T)))*vT*dx(0)  # Advection term in fluid
 T_ = Function(W)
 
 
 
 bcsT = [DirichletBC(W, Constant(8), inflow)]
-output_file = File('solution.pvd')
+output_file = File('Problems/Square_Pipe_Non_Automatic/Solution/solution.pvd')
 
 
 
