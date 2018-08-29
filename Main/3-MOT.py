@@ -19,9 +19,9 @@ from collections import Iterable
 from materials_properties import calculate_D, calculate_thermal_conductivity, calculate_specific_heat, calculate_density
 
 def get_apreprovars(apreprovars):
-    #return 'MOT_parameters_RCB.json'
+    return 'Problems/RCB/Parameters/MOT_parameters_RCB.json'
     #return 'Problems/Breeder_Blanket/Parameters/MOT_parameters_breeder_blankets.json'
-    return 'Problems/Square_Pipe/Parameters/MOT_parameters_square_pipe.json'
+    #return 'Problems/Square_Pipe/Parameters/MOT_parameters_square_pipe.json'
     #return 'MOT_parameters_breeder_blankets_connected.json'
     #return 'MOT_parameters_CFD.json'
 
@@ -219,6 +219,8 @@ def define_mesh(data, solve_laminar_flow):
         dx_fluid = False
         ds_fluid = False
         n_fluid = False
+        surface_marker_fluid = False
+        
 
     return mesh, n0, volume_marker, dx, surface_marker, ds, mesh_fluid, dx_fluid, surface_marker_fluid, ds_fluid, n_fluid
 
@@ -873,7 +875,6 @@ def time_stepping(data,
     def sigma(u, p):
         return 2*mu*epsilon(u) - p*Identity(len(u))
     k = dt
-    A1, L1, A2, L2, A3, L3 = define_variational_problem_laminar_flow(True, True, U, Q, dx_fluid, ds_fluid, n_fluid, bcu, bcp, dt)
 
     ###### Define variational problem for step 1
     #F1 = rho*dot((u - u_n) / k, v)*dx_fluid \
@@ -1026,18 +1027,7 @@ if __name__ == "__main__":
 
     FT = define_variational_problem_heat_transfer(solve_heat_transfer, solve_transient, dt, V, specific_heat, density, thermal_conductivity, Neumann_BC_T_diffusion, Robin_BC_T_diffusion, Source_T_diffusion)
 
-    u = TrialFunction(U)
-    v = TestFunction(U)
-    p = TrialFunction(Q)
-    q = TestFunction(Q)
-    T = Function(V)
-    T_n = Function(V)
-    c = Function(V)
-    c_n = Function(V)
-    u_n = Function(U)
-    u_  = Function(U)
-    p_n = Function(Q)
-    p_  = Function(Q)
+
     A1, L1, A2, L2, A3, L3 = define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient, U, Q, dx_fluid, ds_fluid, n_fluid, bcu, bcp, dt)
 
     
