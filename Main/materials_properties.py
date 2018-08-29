@@ -129,3 +129,7 @@ def calculate_density(T, material_id):
     else:
         interpolated_object = density_dict[material_id]
         return float(interpolated_object.__call__(T))
+
+
+def calculate_mu(T, material_id):
+    return 1#1.875e-4
