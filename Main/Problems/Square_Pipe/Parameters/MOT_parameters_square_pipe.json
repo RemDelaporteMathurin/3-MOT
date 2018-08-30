@@ -9,8 +9,12 @@
       "project_files":"Problems/Square_Pipe/Geometry/Square_Pipe.cub",
       "materials":[
         {
-          "volumes":[1,2],
-          "material":"tungsten"
+          "volumes":[2],
+          "material":"lithium_lead"
+        },
+        {
+          "volumes":[1],
+          "material":"eurofer"
         }
       ]
     },
@@ -19,12 +23,12 @@
       "solve_with_decay":0,
       "solve_tritium_diffusion":0,
       "solve_laminar_flow":1,
-      "solve_heat_transfer":0,
+      "solve_heat_transfer":1,
       "couple_tritium_diffusion_heat_transfer":0,
       "couple_tritium_diffusion_laminar_flow":0,
       "couple_heat_transfer_laminar_flow":0,
       "heat_transfers":{
-        "update_properties":1,
+        "update_properties":0,
         "boundary_conditions":{
           "neumann":[
               ],
@@ -46,17 +50,18 @@
         "volumes":[2],
         "boundary_conditions_velocity":[
           {
+            "surface":[11],
+            "valuex":"0",
+            "valuey":"0",
+            "valuez":"-0.005"
+          },
+          {
             "surface":[5,6,7,8],
             "valuex":"0",
             "valuey":"0",
             "valuez":"0"
-          },
-          {
-            "surface":[11],
-            "valuex":"0",
-            "valuey":"0",
-            "valuez":"0.1"
           }
+
         ],
         "boundary_conditions_pressure":[
           {
@@ -102,8 +107,8 @@
       }
   },
   "solving_parameters":{
-    "study":"transient",
-    "final_time":10.0, 
+    "study":"steady_state",
+    "final_time":50.0, 
     "number_of_time_steps":100 
   },
 

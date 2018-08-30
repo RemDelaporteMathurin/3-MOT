@@ -104,6 +104,7 @@ def get_solvers(data):
         couple_tritium_diffusion_laminar_flow, update_thermal_properties, \
         update_tritium_diffusion_properties, update_fluid_properties
 
+
 def get_solving_parameters(data, solve_transient):
     print('Getting the solving parameters')
     Time = 0
@@ -193,6 +194,7 @@ def define_mesh(data, solve_laminar_flow):
         ds_fluid = False
         n_fluid = False
         surface_marker_fluid = False
+        volume_marker_fluid = False
 
     return mesh, n0, volume_marker, dx, surface_marker, ds, mesh_fluid, volume_marker_fluid, dx_fluid, surface_marker_fluid, ds_fluid, n_fluid
 
@@ -203,11 +205,17 @@ def define_functionspaces(data, mesh, mesh_fluid):
     V0 = FunctionSpace(mesh, 'DG', 0)  # FunctionSpace of the materials properties
     if mesh_fluid is not False:
         Q = FunctionSpace(mesh_fluid, 'P', 1)  # Functionspace of pressure
-        U = VectorFunctionSpace(mesh_fluid, 'P', 2)  # FunctionSpace of velocity
+        V2 = VectorFunctionSpace(mesh_fluid, 'P', 2)  # FunctionSpace of velocity
+        V3  = VectorElement('P', mesh_fluid.ufl_cell(), 2)
+        P  = FiniteElement('P', mesh_fluid.ufl_cell(), 1)
+        TH = MixedElement([V3, P])
+        W  = FunctionSpace(mesh_fluid, TH)
     else:
         Q = FunctionSpace(mesh, 'P', 1)  # Functionspace of pressure
         U = VectorFunctionSpace(mesh, 'P', 2)  # FunctionSpace of velocity        
-    return V, V0, U, Q
+        V2 = VectorFunctionSpace(mesh, 'P', 2)  # FunctionSpace of velocity
+        
+    return V, V0, V2, Q, W
 
 
 def define_BC_diffusion(data, solve_diffusion, V, surface_marker, ds):
@@ -291,25 +299,32 @@ def define_BC_heat_transfer(data, solve_heat_transfer, V, surface_marker, ds):
     return bcs_T, Neumann_BC_T_diffusion, Robin_BC_T_diffusion
 
 
-def define_BC_laminar_flow(data, solve_laminar_flow, U, Q, surface_marker_fluid):
+def define_BC_laminar_flow(data, solve_laminar_flow, U, Q, W, surface_marker_fluid):
     if solve_laminar_flow is True:
         print("Defining BC laminar flow")
-        bcu = []
+        bcu_transient = []
+        bcs_stationary = []
         for DC in data['physics']['laminar_flow']['boundary_conditions_velocity']:
             value = Expression((DC['valuex'], DC['valuey'], DC['valuez']), t=0, degree=2)
             for surface in DC['surface']:
                 bci = DirichletBC(U, value, surface_marker_fluid, surface)
-                bcu.append(bci)
+                bci_  = DirichletBC(W.sub(0), value, surface_marker_fluid, surface)
+                bcu_transient.append(bci)
+                bcs_stationary.append(bci_)
 
-        bcp = []
+        bcp_transient = []
         for DC in data['physics']['laminar_flow']['boundary_conditions_pressure']:
             value = Expression(str(DC['value']), t=0, degree=2)
             for surface in DC['surface']:
                 bci = DirichletBC(Q, value, surface_marker_fluid, surface)
-                bcp.append(bci)
-        return bcu, bcp
+                bci_  = DirichletBC(W.sub(1), value, surface_marker_fluid, surface)
+                bcp_transient.append(bci)
+                bcs_stationary.append(bci_)
+
+        
+        return bcs_stationary, bcu_transient, bcp_transient
     else:
-        return False, False
+        return False, False, False
 
 
 def define_initial_values(solve_heat_transfer, solve_diffusion, data, V):
@@ -435,67 +450,69 @@ def define_variational_problem_heat_transfer(solve_heat_transfer, solve_transien
             FT += vT * Robin[1] * (T-Robin[2])*Robin[0]
         
         if couple_heat_transfer_laminar_flow is True:
-            u_ = Function(U)
+
             for volume in data["physics"]["laminar_flow"]["volumes"]:
-                FT += (dot(u_, grad(T)))*vT*dx(volume)
+                FT += specific_heat*density*(dot(u_, grad(T)))*vT*dx(2)
 
         return FT
     return False, False
 
 
-def define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient, U, Q, dx_fluid, ds_fluid, n_fluid, bcu, bcp, dt, mu, density):
+def define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient, V2, Q, W, dx_fluid, ds_fluid, n_fluid, bcu_transient, bcp_transient, bcs_stationary, dt, mu, density):
 
     if solve_laminar_flow is True:
         print('Defining variation problem laminar flow')
+        if solve_transient is True:
+            # Define strain-rate tensor
+            def epsilon(u):
+                return sym(nabla_grad(u))
+            # Define stress tensor
+            def sigma(u, p):
+                return 2*mu*epsilon(u) - p*Identity(len(u))
 
-        # Define strain-rate tensor
-        def epsilon(u):
-            return sym(nabla_grad(u))
-        # Define stress tensor
-        def sigma(u, p):
-            return 2*mu*epsilon(u) - p*Identity(len(u))
-        # Define trial and test functions
-        u = TrialFunction(U)
-        v = TestFunction(U)
-        p = TrialFunction(Q)
-        q = TestFunction(Q)
+            #### Define variational problem for step 1
+            F1 = density*dot((u - u_n) / k, v)*dx_fluid \
+                + density*dot(dot(u_n, nabla_grad(u_n)), v)*dx_fluid \
+                + inner(sigma(U, p_n), epsilon(v))*dx_fluid \
+                + dot(p_n*n_fluid, v)*ds_fluid - dot(mu*nabla_grad(U)*n_fluid, v)*ds_fluid \
+                - dot(f, v)*dx_fluid
+            a1 = lhs(F1)
+            L1 = rhs(F1)
+            # Define variational problem for step 2
+            a2 = dot(nabla_grad(p), nabla_grad(q))*dx_fluid
+            L2 = dot(nabla_grad(p_n), nabla_grad(q))*dx_fluid - (1/k)*div(u_)*q*dx_fluid
+            # Define variational problem for step 3
+            a3 = dot(u, v)*dx_fluid
+            L3 = dot(u_, v)*dx_fluid - k*dot(nabla_grad(p_ - p_n), v)*dx_fluid
+            # Assemble matrices
+            A1 = assemble(a1)
+            A2 = assemble(a2)
+            A3 = assemble(a3)
 
-        # Define functions for solutions at previous and current time steps
-        u_n = Function(U)
-        u_  = Function(U)
-        p_n = Function(Q)
-        p_  = Function(Q)
+            # Apply boundary conditions to matrices
+            [bc.apply(A1) for bc in bcu_transient]
+            [bc.apply(A2) for bc in bcp_transient]
 
-        # Define expressions used in variational forms
-        U   = 0.5*(u_n + u)
-        f   = Constant((0, 0, 0))
-        k   = Constant(dt)
+            return False, A1, L1, A2, L2, A3, L3
+        else:
+            (v_, q_) = TestFunctions(W)
+            w = Function(W)
+            (u, p) = split(w)
+            ### Steady Part of the Momentum Equation
+            def steady(u, dx_fluid):
+                T = -p*I + 2*mu*sym(grad(u))
+                return (inner(grad(u)*u, v_) + inner(T, grad(v_)) - inner(f, v_)) * dx_fluid
 
-        #### Define variational problem for step 1
-        F1 = density*dot((u - u_n) / k, v)*dx_fluid \
-           + density*dot(dot(u_n, nabla_grad(u_n)), v)*dx_fluid \
-           + inner(sigma(U, p_n), epsilon(v))*dx_fluid \
-           + dot(p_n*n_fluid, v)*ds_fluid - dot(mu*nabla_grad(U)*n_fluid, v)*ds_fluid \
-           - dot(f, v)*dx_fluid
-        a1 = lhs(F1)
-        L1 = rhs(F1)
-        # Define variational problem for step 2
-        a2 = dot(nabla_grad(p), nabla_grad(q))*dx_fluid
-        L2 = dot(nabla_grad(p_n), nabla_grad(q))*dx_fluid - (1/k)*div(u_)*q*dx_fluid
-        # Define variational problem for step 3
-        a3 = dot(u, v)*dx_fluid
-        L3 = dot(u_, v)*dx_fluid - k*dot(nabla_grad(p_ - p_n), v)*dx_fluid      
-        # Assemble matrices
-        A1 = assemble(a1)
-        A2 = assemble(a2)
-        A3 = assemble(a3)
 
-        # Apply boundary conditions to matrices
-        [bc.apply(A1) for bc in bcu]
-        [bc.apply(A2) for bc in bcp]
+            I = Identity(u.geometric_dimension())
 
-        return A1, L1, A2, L2, A3, L3
-    return False, False, False, False, False, False
+            F = steady(u, dx_fluid) + q_*div(u)*dx_fluid
+
+            J = derivative(F, w)
+            problem = NonlinearVariationalProblem(F, w, bcs_stationary, J)
+            solver = NonlinearVariationalSolver(problem)
+            return solver, False, False, False, False, False, False
+    return False, False, False, False, False, False, False
 
 
 def update_properties(mesh, mesh_fluid, volume_marker, volume_marker_fluid, T, solve_diffusion, solve_heat_transfer, solve_laminar_flow, update_tritium_diffusion_properties, update_thermal_properties, update_fluid_properties):
@@ -709,62 +726,31 @@ def time_stepping(data,
 
     T = Function(V)
     c = Function(V)
-    u_n = Function(U)
-    u_  = Function(U)
-    p_n = Function(Q)
-    p_  = Function(Q)
     off_gassing = list()
     output_file = File(data["output_file"])
+    output_file1 = File('Problems/Square_pipe/solution_flow.pvd')
     t = 0
     # Use amg preconditioner if available
     #prec = "amg" if has_krylov_solver_preconditioner("amg") else "default"
     # Use nonzero guesses - essential for CG with non-symmetric BC
     #parameters['krylov_solver']['nonzero_initial_guess'] = True
 
-
-    if solve_laminar_flow is True:
-        ### Define strain-rate tensor
-        def epsilon(u):
-            return sym(nabla_grad(u))
-        ## Define stress tensor
-        def sigma(u, p):
-            return 2*mu*epsilon(u) - p*Identity(len(u))
-        ### Define trial and test functions
-        u = TrialFunction(U)
-        v = TestFunction(U)
-        p = TrialFunction(Q)
-        q = TestFunction(Q)
-        T = Function(V)
-        c = Function(V)
-        u_n = Function(U)
-        u_  = Function(U)
-        p_n = Function(Q)
-        p_  = Function(Q)
-        #output_file = File(data["output_file"])
-        #t = 0
-        ### Define expressions used in variational forms
-        U   = 0.5*(u_n + u)
-        f   = Constant((0, 0, 0))
-        k   = Constant(dt)
-        ##### Define variational problem for step 1
-        F1 = density*dot((u - u_n) / k, v)*dx_fluid \
-           + density*dot(dot(u_n, nabla_grad(u_n)), v)*dx_fluid \
-           + inner(sigma(U, p_n), epsilon(v))*dx_fluid \
-           + dot(p_n*n_fluid, v)*ds_fluid - dot(mu*nabla_grad(U)*n_fluid, v)*ds_fluid \
-           - dot(f, v)*dx_fluid
-        a1 = lhs(F1)
-        L1 = rhs(F1)
-        # Define variational problem for step 2
-        a2 = dot(nabla_grad(p), nabla_grad(q))*dx_fluid
-        L2 = dot(nabla_grad(p_n), nabla_grad(q))*dx_fluid - (1/k)*div(u_)*q*dx_fluid
-        # Define variational problem for step 3
-        a3 = dot(u, v)*dx_fluid
-        L3 = dot(u_, v)*dx_fluid - k*dot(nabla_grad(p_ - p_n), v)*dx_fluid      
-
     for n in range(num_steps):
         t += dt
         print(100*t/Time, end=' % \r')
         # Compute solution velocity and pressure
+
+        
+        # Compute solution concentration
+        if solve_diffusion is True:
+            update_source_term(t, 'tritium_diffusion', Source_c_diffusion, Source_T_diffusion)
+            solve(lhs(F) == rhs(F), c, bcs_c)
+            output_file << (c, t)
+            c_n.assign(c)
+            bcs_c = update_bc(t, "tritium_diffusion")
+            post_processing(data, c, "tritium_diffusion", header_tritium_diffusion, values_tritium_diffusion, t, ds, dx, volume_marker, D, n0)
+        # Compute solution temperature
+
         if solve_laminar_flow is True:
             # Step 1: Tentative velocity step
             b1 = assemble(L1)
@@ -782,16 +768,7 @@ def time_stepping(data,
             # Update previous solution
             u_n.assign(u_)
             p_n.assign(p_)
-        
-        # Compute solution concentration
-        if solve_diffusion is True:
-            update_source_term(t, 'tritium_diffusion', Source_c_diffusion, Source_T_diffusion)
-            solve(lhs(F) == rhs(F), c, bcs_c)
-            output_file << (c, t)
-            c_n.assign(c)
-            bcs_c = update_bc(t, "tritium_diffusion")
-            post_processing(data, c, "tritium_diffusion", header_tritium_diffusion, values_tritium_diffusion, t, ds, dx, volume_marker, D, n0)
-        # Compute solution temperature
+            print(u_(0,0,0))
         if solve_heat_transfer is True:
             update_source_term(t, 'heat_transfers', Source_c_diffusion, Source_T_diffusion)
             solve(lhs(FT) == rhs(FT), T, bcs_T)
@@ -806,8 +783,18 @@ def time_stepping(data,
 
 
 def solving(data, 
-            solve_transient,
-            solve_heat_transfer, solve_diffusion, solve_laminar_flow, couple_tritium_diffusion_heat_transfer, Time, num_steps, dt, V, U, Q, D, thermal_conductivity, mu, density,  F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, A1, L1, A2, L2, A3, L3, bcu, bcp,  ds, dx, volume_marker, n0):
+            solve_transient, 
+            solve_heat_transfer, 
+            solve_diffusion, 
+            solve_laminar_flow, 
+            couple_tritium_diffusion_heat_transfer, 
+            Time, num_steps, dt, 
+            V, V2, Q, D, 
+            thermal_conductivity, mu, density, 
+            F, Source_c_diffusion, bcs_c, 
+            FT, Source_T_diffusion, bcs_T, 
+            A1, L1, A2, L2, A3, L3, bcu_transient, bcp_transient, bcs_stationary, 
+            ds, dx, volume_marker, n0):
     values_heat_transfers = []
     values_tritium_diffusion = []
     header_heat_transfers = ''
@@ -857,7 +844,18 @@ def solving(data,
 
 
     else:
-        print(data["output_file"])
+        (v_, q_) = TestFunctions(W)
+        w = Function(W)
+        (u, p) = split(w)
+        ### Steady Part of the Momentum Equation
+        def steady(u, dx_fluid):
+            T = -p*I + 2*mu*sym(grad(u))
+            return (inner(grad(u)*u, v_) + inner(T, grad(v_)) - inner(f, v_)) * dx_fluid
+        I = Identity(u.geometric_dimension())
+        F = steady(u, dx_fluid) + q_*div(u)*dx_fluid
+        J = derivative(F, w)
+        problem = NonlinearVariationalProblem(F, w, bcs_stationary, J)
+        solver = NonlinearVariationalSolver(problem)
         output_file = File(data["output_file"])
         if solve_heat_transfer is True:
             T = Function(V)
@@ -869,6 +867,13 @@ def solving(data,
           solve(lhs(F) == rhs(F), c, bcs_c)
           output_file << (c, 0.0)
           post_processing(data, c, "tritium_diffusion", header_tritium_diffusion, values_tritium_diffusion, 0, ds, dx, volume_marker, D, n0)
+        if solve_laminar_flow is True:
+            solver.solve()
+            (u, p) = w.split()
+            output_file << (u, 0.0)
+            output_file << (p, 0.0)
+
+
 
 
 
@@ -889,7 +894,7 @@ if __name__ == "__main__":
 
     mesh, n0, volume_marker, dx, surface_marker, ds, mesh_fluid, volume_marker_fluid, dx_fluid, surface_marker_fluid, ds_fluid, n_fluid = define_mesh(data, solve_laminar_flow)
 
-    V, V0, U, Q = define_functionspaces(data, mesh, mesh_fluid)
+    V, V0, V2, Q, W = define_functionspaces(data, mesh, mesh_fluid)
 
     c_n, T_n = define_initial_values(solve_heat_transfer, solve_diffusion, data, V)
 
@@ -899,15 +904,31 @@ if __name__ == "__main__":
 
     bcs_T, Neumann_BC_T_diffusion, Robin_BC_T_diffusion = define_BC_heat_transfer(data, solve_heat_transfer, V, surface_marker, ds)
 
-    bcu, bcp = define_BC_laminar_flow(data, solve_laminar_flow, U, Q, surface_marker_fluid)
+    bcs_stationary, bcu_transient, bcp_transient = define_BC_laminar_flow(data, solve_laminar_flow, V2, Q, W, surface_marker_fluid)
 
     D, thermal_conductivity, specific_heat, density, mu = define_materials_properties(V0, data, volume_marker, solve_heat_transfer, solve_diffusion, solve_laminar_flow)
     
+
+    ### Unknown and test functions
+    (v_, q_) = TestFunctions(W)
+    w = Function(W)
+    (u_stationary, p_stationary) = split(w)
+    u_n = Function(V2)
+    u_  = Function(V2)
+    p_n = Function(Q)
+    p_  = Function(Q)
+    u = TrialFunction(V2)
+    v = TestFunction(V2)
+    p = TrialFunction(Q)
+    q = TestFunction(Q)
+    U   = 0.5*(u_n + u)
+    f   = Constant((0, 0, 0))
+    k   = Constant(dt)
+
     F = define_variational_problem_diffusion(solve_diffusion, solve_transient, dt, solve_with_decay, V, Neumann_BC_c_diffusion, Robin_BC_c_diffusion, Source_c_diffusion)
 
     FT = define_variational_problem_heat_transfer(solve_heat_transfer, solve_transient, dt, V, specific_heat, density, thermal_conductivity, Neumann_BC_T_diffusion, Robin_BC_T_diffusion, Source_T_diffusion)
 
-    A1, L1, A2, L2, A3, L3 = define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient, U, Q, dx_fluid, ds_fluid, n_fluid, bcu, bcp, dt, mu, density)
-    
-    solving(data, solve_transient, solve_heat_transfer, solve_diffusion, solve_laminar_flow, couple_tritium_diffusion_heat_transfer, Time, num_steps, dt, V, U, Q, D, thermal_conductivity, mu, density, F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, A1, L1, A2, L2, A3, L3, bcu, bcp, ds, dx, volume_marker, n0)
-    
+    solver, A1, L1, A2, L2, A3, L3 = define_variational_problem_laminar_flow(solve_laminar_flow, solve_transient, V2, Q, W, dx_fluid, ds_fluid, n_fluid, bcu_transient, bcp_transient, bcs_stationary, dt, mu, density)
+
+    solving(data, solve_transient, solve_heat_transfer, solve_diffusion, solve_laminar_flow, couple_tritium_diffusion_heat_transfer, Time, num_steps, dt, V, V2, Q, D, thermal_conductivity, mu, density, F, Source_c_diffusion, bcs_c, FT, Source_T_diffusion, bcs_T, A1, L1, A2, L2, A3, L3, bcu_transient, bcp_transient, bcs_stationary, ds, dx, volume_marker, n0)
