@@ -56,7 +56,7 @@
         "dc":[
           {
             "surface":[31,32,33,34,35,36],
-            "value":"0.1*exp(-t*log(2)/(12.3*365.25*24*3600))"
+            "value":"exp(-t*log(2)/(12.3*365.25*24*3600))"
           }
         ],
         "robin":[
@@ -96,7 +96,7 @@
       "volume_minimum":[],
       "volume_maximum":[],
       "custom":["assemble(c_n*ds(1))+assemble(c_n*ds(2))+assemble(c_n*ds(3))+assemble(c_n*ds(4))+assemble(c_n*ds(5))+assemble(c_n*ds(6))","assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(1))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(2))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(3))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(4))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(5))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(6))"],
-      "output_file":"Problems/RCB/post-processing-tritium-diffusion-real_simulation.csv"
+      "output_file":"Problems/RCB/post-processing-tritium-diffusion.csv"
     }
   }
 }
