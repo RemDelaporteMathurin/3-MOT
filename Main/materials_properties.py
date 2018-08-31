@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import interpolate as scipy_interpolate
+import inspect
 
 
 def initiate_thermal_conductivity_interpolation():
@@ -104,6 +105,10 @@ def calculate_D(T, material_id):
 def calculate_thermal_conductivity(T, material_id):
     if material_id == "concrete":
         return 0.5
+    if material_id == "polymer":
+        return 0.3
+    if material_id == "steel":
+        return 16
     if material_id not in thermal_conductivities_dict.keys():
         raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
     else:
@@ -114,6 +119,10 @@ def calculate_thermal_conductivity(T, material_id):
 def calculate_specific_heat(T, material_id):
     if material_id == "concrete":
         return 880
+    if material_id == "polymer":
+        return 1000
+    if material_id == "steel":
+        return 500
     if material_id not in specific_heat_dict.keys():
         raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
     else:
@@ -124,6 +133,10 @@ def calculate_specific_heat(T, material_id):
 def calculate_density(T, material_id):
     if material_id == "concrete":
         return 2400
+    if material_id == "polymer":
+        return 940
+    if material_id == "steel":
+        return 7700
     if material_id not in density_dict.keys():
         raise ValueError("!!ERROR!! Unable to find "+str(material_id)+" as material ID in the database "+str(inspect.stack()[0][3]))
     else:
@@ -132,4 +145,5 @@ def calculate_density(T, material_id):
 
 
 def calculate_mu(T, material_id):
-    return 1#1.875e-4
+    if material_id == 'lithium_lead':
+        return 0.187e-3*np.exp(1400/T)

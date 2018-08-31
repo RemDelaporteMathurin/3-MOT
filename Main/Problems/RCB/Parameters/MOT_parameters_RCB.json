@@ -1,10 +1,10 @@
 {
-  "quality" : "1",
+  "quality" : "5",
   "scaling" : "1",
-  "mesh_file" : "Problems/RCB/Geometry/mesh_and_markers_RCB_quality1.xdmf",
+  "mesh_file" : "Problems/RCB/Geometry/mesh_RCB.xdmf",
   "output_file" : "Problems/RCB/Solution/solution.pvd",
   "structure_and_materials": {
-    "project_files":["Problems/RCB/Geometry/concrete.stp","Problems/RCB/Geometry/polymer.stp","Problems/RCB/Geometry/steel.stp"],
+    "project_files":["Problems/RCB/Geometry/concrete.stp", "Problems/RCB/Geometry/polymer.stp", "Problems/RCB/Geometry/steel.stp"],
     "materials":[
       {
         "volumes":[1],
@@ -24,29 +24,39 @@
     "solve_with_decay":1,
     "solve_tritium_diffusion":1,
     "solve_laminar_flow":0,
-    "solve_heat_transfer":0,
+    "solve_heat_transfer":1,
     "diffusion_coeff_temperature_dependent":0,
+    "couple_tritium_diffusion_heat_transfer":1,
+    "couple_tritium_diffusion_laminar_flow":0,
+    "couple_heat_transfer_laminar_flow":0,
     "calculate_off_gassing":1,
     "heat_transfers":{
+      "update_properties":0,
       "boundary_conditions":{
         "neumann":[
             ],
         "dc":[
+          {
+            "surface":[1,2,3,4,5,6],
+            "value":"14+273.15+7*cos(2*3.14*t/365.25/24/3600)+16*cos(2*3.14*t/24/3600)"
+          }
         ],
         "robin":[
         ]
       },
-      "initial_value":293.15, 
-      "source_term":0 
+      "initial_value":295.15, 
+      "source_terms":[
+      ]
     },
     "tritium_diffusion":{
+      "update_properties":1,
       "boundary_conditions":{
         "neumann":[
             ],
         "dc":[
           {
             "surface":[31,32,33,34,35,36],
-            "value":"exp(-t*log(2)/(12.3*365.25*24*3600))"
+            "value":"0.1*exp(-t*log(2)/(12.3*365.25*24*3600))"
           }
         ],
         "robin":[
@@ -69,7 +79,7 @@
   "solving_parameters":{
     "study":"transient",
     "final_time":2e9, 
-    "number_of_time_steps":100
+    "number_of_time_steps":1000
   },
   "post_processing":{
     "heat_transfers":{
@@ -85,8 +95,8 @@
       "volume_average":[],
       "volume_minimum":[],
       "volume_maximum":[],
-      "custom":[],
-      "output_file":"Problems/RCB/post-processing-tritium-diffusion.csv"
+      "custom":["assemble(c_n*ds(1))+assemble(c_n*ds(2))+assemble(c_n*ds(3))+assemble(c_n*ds(4))+assemble(c_n*ds(5))+assemble(c_n*ds(6))","assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(1))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(2))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(3))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(4))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(5))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(6))"],
+      "output_file":"Problems/RCB/post-processing-tritium-diffusion-real_simulation.csv"
     }
   }
 }

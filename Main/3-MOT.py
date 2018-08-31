@@ -20,11 +20,10 @@ from materials_properties import calculate_D, calculate_thermal_conductivity, ca
 
 
 def get_apreprovars(apreprovars):
-    #return 'Problems/RCB/Parameters/MOT_parameters_RCB.json'
+    return 'Problems/RCB/Parameters/MOT_parameters_RCB.json'
     #return 'Problems/Breeder_Blanket/Parameters/MOT_parameters_breeder_blankets.json'
-    return 'Problems/Square_Pipe/Parameters/MOT_parameters_square_pipe.json'
+    #return 'Problems/Square_Pipe/Parameters/MOT_parameters_square_pipe.json'
     #return 'MOT_parameters_breeder_blankets_connected.json'
-    #return 'MOT_parameters_CFD.json'
 
 
 def byteify(input):
@@ -123,6 +122,7 @@ def get_volume_markers(mesh, xdmf_in):
     # read in the volume markers
     volume_marker_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
     xdmf_in.read(volume_marker_mvc, "volume_marker_volume_id")
+    print('Coucou')
 
     volume_marker = MeshFunction("size_t", mesh, volume_marker_mvc)
     dx = Measure('dx', domain=mesh, subdomain_data=volume_marker)
@@ -212,8 +212,11 @@ def define_functionspaces(data, mesh, mesh_fluid):
         W  = FunctionSpace(mesh_fluid, TH)
     else:
         Q = FunctionSpace(mesh, 'P', 1)  # Functionspace of pressure
-        U = VectorFunctionSpace(mesh, 'P', 2)  # FunctionSpace of velocity        
         V2 = VectorFunctionSpace(mesh, 'P', 2)  # FunctionSpace of velocity
+        V3  = VectorElement('P', mesh.ufl_cell(), 2)
+        P  = FiniteElement('P', mesh.ufl_cell(), 1)
+        TH = MixedElement([V3, P])
+        W  = FunctionSpace(mesh, TH)
         
     return V, V0, V2, Q, W
 
@@ -706,7 +709,7 @@ def time_stepping(data,
                   FT,
                   bcs_T,
                   A1, L1, A2, L2, A3, L3,
-                  bcu, bcp,
+                  bcu_transient, bcp_transient,
                   ds,
                   dx,
                   Source_c_diffusion, Source_T_diffusion,
@@ -754,7 +757,7 @@ def time_stepping(data,
         if solve_laminar_flow is True:
             # Step 1: Tentative velocity step
             b1 = assemble(L1)
-            [bc.apply(b1) for bc in bcu]
+            [bc.apply(b1) for bc in bcu_transient]
             solve(A1, u_.vector(), b1)
             # Step 2: Pressure correction step
             b2 = assemble(L2)
@@ -833,7 +836,7 @@ def solving(data,
                       L2=L2, 
                       A3=A3, 
                       L3=L3, 
-                      bcu=bcu, bcp=bcp,
+                      bcu_transient=bcu_transient, bcp_transient=bcp_transient,
                       ds=ds,
                       dx=dx,
                       volume_marker=volume_marker,
