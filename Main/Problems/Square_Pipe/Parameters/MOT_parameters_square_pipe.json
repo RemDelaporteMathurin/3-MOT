@@ -1,0 +1,133 @@
+{
+    "quality" : 10,
+    "scaling" : 0.001,
+    "mesh_file" : "Problems/Square_Pipe/Geometry/mesh_Square_Pipe.xdmf",
+
+    "output_file" : "Problems/Square_Pipe/Solution/solution.pvd",
+
+    "structure_and_materials": {
+      "project_files":"Problems/Square_Pipe/Geometry/Square_Pipe.cub",
+      "materials":[
+        {
+          "volumes":[2],
+          "material":"lithium_lead"
+        },
+        {
+          "volumes":[1],
+          "material":"eurofer"
+        }
+      ]
+    },
+
+   "physics": {
+      "solve_with_decay":0,
+      "solve_tritium_diffusion":0,
+      "solve_laminar_flow":1,
+      "solve_heat_transfer":1,
+      "couple_tritium_diffusion_heat_transfer":0,
+      "couple_tritium_diffusion_laminar_flow":0,
+      "couple_heat_transfer_laminar_flow":0,
+      "heat_transfers":{
+        "update_properties":0,
+        "boundary_conditions":{
+          "neumann":[
+              ],
+          "dc":[
+            {
+              "surface":[11],
+              "value":"300+20"
+            }
+          ],
+          "robin":[
+          ]
+        },
+        "initial_value":"300", 
+        "source_terms":[
+        ] 
+      },
+      "laminar_flow":{
+        "update_properties":0,
+        "volumes":[2],
+        "boundary_conditions_velocity":[
+          {
+            "surface":[11],
+            "valuex":"0",
+            "valuey":"0",
+            "valuez":"-0.005"
+          },
+          {
+            "surface":[5,6,7,8],
+            "valuex":"0",
+            "valuey":"0",
+            "valuez":"0"
+          }
+
+        ],
+        "boundary_conditions_pressure":[
+          {
+            "surface":[12],
+            "value":"0"
+          }
+        ]
+      },
+      "tritium_diffusion":{
+        "update_properties":1,
+        "boundary_conditions":{
+          "neumann":[
+              ],
+          "dc":[
+            {
+              "surface":[1,4,7],
+              "value":0
+            },
+            {
+              "surface":[322, 75, 324, 63, 326, 82, 328, 85, 84, 83, 69, 68, 67, 66, 336, 89, 338, 73, 340, 94, 342, 97, 96, 95, 77, 81, 80, 79, 350, 101, 352, 87, 354, 106, 356, 107, 91, 93, 360, 111, 362, 99, 364, 116, 366, 117, 103, 105, 370, 121, 372, 109, 374, 126, 376, 127, 113, 115, 380, 131, 382, 119, 384, 136, 386, 137, 123, 125, 390, 141, 392, 129, 394, 146, 396, 147, 133, 135, 400, 151, 402, 139, 404, 156, 406, 157, 143, 145, 410, 161, 412, 149, 414, 166, 416, 167, 153, 155, 420, 171, 422, 159, 424, 176, 426, 177, 163, 165, 430, 181, 432, 169, 434, 186, 436, 187, 173, 175, 440, 191, 442, 179, 444, 196, 446, 197, 183, 185, 450, 201, 452, 189, 454, 206, 456, 207, 193, 195, 460, 37, 462, 199, 464, 38, 466, 39, 203, 205],
+              "value":0
+            },
+            {
+              "surface":[221, 295, 296, 298, 299, 300, 301, 302, 303, 305, 306, 222, 235, 309, 310, 312, 313, 314, 315, 316, 317, 319, 320, 236],
+              "value":0
+            },
+            {
+              "surface":[28,492,22,487],
+              "value":0
+            }
+
+          ],
+          "robin":[
+          ]
+        },
+        "initial_value":0, 
+        "source_terms":[
+          {
+            "volumes":[2],
+            "value":1e-2
+          }
+        ] 
+      }
+  },
+  "solving_parameters":{
+    "study":"steady_state",
+    "final_time":50.0, 
+    "number_of_time_steps":100 
+  },
+
+  "post_processing":{
+    "heat_transfers":{
+      "surface_flux":[],
+      "volume_average":[],
+      "volume_minimum":[],
+      "volume_maximum":[],
+      "custom":[],
+      "output_file":"post-processingHT.csv"
+    },
+    "tritium_diffusion":{
+      "surface_flux":[],
+      "volume_average":[],
+      "volume_minimum":[],
+      "volume_maximum":[],
+      "custom":[],
+      "output_file":"post-processing-tritium-diffusion.csv"
+    }
+  }
+}
