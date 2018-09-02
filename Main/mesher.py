@@ -4,7 +4,7 @@ import json
 # without the Trelis GUI
 # trelis -nographics -batch mesher.py "json_input='input_parameters/breeder_blankets_parameters.json'"
 # with the Trelis GUI
-# trelis mesher.py "json_input='input_parameters/breeder_blankets_parameters.json'"
+# trelis mesher.py "json_input='Problems/Breeder_Blanket/Parameters/MOT_parameters_breeder_blankets_paper_version.json'"
 
 
 def byteify(input):
