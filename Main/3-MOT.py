@@ -390,8 +390,10 @@ def define_materials_properties(V0, data, volume_marker, solve_heat_transfer, so
     specific_heat = Function(V0)
     density = Function(V0)
     mu = Function(V0)
+    n = 0
     # #Assigning each to each cell its properties
     for cell_no in range(len(volume_marker.array())):
+        print(round(100*n/len(volume_marker.array()),1), end=' % \r')
         volume_id = volume_marker.array()[cell_no]  # This is the volume id (Trelis)
         material_id = which_material_is_it(volume_id, data)
         if solve_heat_transfer is True:
@@ -403,6 +405,7 @@ def define_materials_properties(V0, data, volume_marker, solve_heat_transfer, so
         if solve_laminar_flow is True:
             mu.vector()[cell_no] = calculate_mu(data['physics']['heat_transfers']['initial_value'], material_id)
         # print(D.vector()[cell_no])
+        n += 1
     return D, thermal_conductivity, specific_heat, density, mu
 
 
