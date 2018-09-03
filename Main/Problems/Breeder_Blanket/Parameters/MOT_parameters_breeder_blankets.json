@@ -9,15 +9,19 @@
     "field_file" : "field.xdmf",
 
     "structure_and_materials": {
-      "project_files":[
-        "Problems/Breeder_Blanket/Geometry/Project_Files/slice_armour_mod1.step",
-        "Problems/Breeder_Blanket/Geometry/Project_Files/slice_back_lithium_lead_mod1.step",
-        "Problems/Breeder_Blanket/Geometry/Project_Files/slice_back_plate_1_mod1.step",
-        "Problems/Breeder_Blanket/Geometry/Project_Files/slice_back_plate_2_mod1.step",
-        "Problems/Breeder_Blanket/Geometry/Project_Files/slice_back_plate_3_mod1.step",
-        "Problems/Breeder_Blanket/Geometry/Project_Files/slice_cooling_plate_material_mod1.step",
-        "Problems/Breeder_Blanket/Geometry/Project_Files/slice_first_wall_material_mod1.step",
-        "Problems/Breeder_Blanket/Geometry/Project_Files/slice_lithium_lead_mod1.step"
+      "project_files":["slice_armour_mod13.step",
+                       "slice_back_helium_mod13.step",
+                       "slice_back_lithium_lead_mod13.step",
+                       "slice_back_plate_1_mod13.step",
+                       "slice_back_plate_2_mod13.step",
+                       "slice_back_plate_3_mod13.step",
+                       "slice_cooling_plate_coolant_mod13.step",
+                       "slice_cooling_plate_material_mod13.step",
+                       "slice_envelope_mod13.step",
+                       "slice_first_wall_coolant_mod13.step",
+                       "slice_first_wall_homogenised_mod13.step",
+                       "slice_first_wall_material_mod13.step",
+                       "slice_lithium_lead_mod13.step"
       ],
       "materials":[
         {
