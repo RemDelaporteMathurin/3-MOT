@@ -20,8 +20,8 @@ from materials_properties import calculate_D, calculate_thermal_conductivity, ca
 
 
 def get_apreprovars(apreprovars):
-    return 'Problems/RCB/Parameters/MOT_parameters_RCB.json'
-    #return 'Problems/Breeder_Blanket/Parameters/MOT_parameters_breeder_blankets.json'
+    #return 'Problems/RCB/Parameters/MOT_parameters_RCB.json'
+    return 'Problems/Breeder_Blanket/Parameters/MOT_parameters_breeder_blankets.json'
     #return 'Problems/Square_Pipe/Parameters/MOT_parameters_square_pipe.json'
     #return 'MOT_parameters_breeder_blankets_connected.json'
 
@@ -122,7 +122,6 @@ def get_volume_markers(mesh, xdmf_in):
     # read in the volume markers
     volume_marker_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
     xdmf_in.read(volume_marker_mvc, "volume_marker_volume_id")
-    print('Coucou')
 
     volume_marker = MeshFunction("size_t", mesh, volume_marker_mvc)
     dx = Measure('dx', domain=mesh, subdomain_data=volume_marker)
@@ -211,12 +210,12 @@ def define_functionspaces(data, mesh, mesh_fluid):
         TH = MixedElement([V3, P])
         W  = FunctionSpace(mesh_fluid, TH)
     else:
-        Q = FunctionSpace(mesh, 'P', 1)  # Functionspace of pressure
-        V2 = VectorFunctionSpace(mesh, 'P', 2)  # FunctionSpace of velocity
-        V3  = VectorElement('P', mesh.ufl_cell(), 2)
-        P  = FiniteElement('P', mesh.ufl_cell(), 1)
-        TH = MixedElement([V3, P])
-        W  = FunctionSpace(mesh, TH)
+        Q = False#FunctionSpace(mesh, 'P', 1)  # Functionspace of pressure
+        V2 = False#VectorFunctionSpace(mesh, 'P', 2)  # FunctionSpace of velocity
+        V3  = False#VectorElement('P', mesh.ufl_cell(), 2)
+        P  = False#FiniteElement('P', mesh.ufl_cell(), 1)
+        TH = False#MixedElement([V3, P])
+        W  = False#FunctionSpace(mesh, TH)
         
     return V, V0, V2, Q, W
 
@@ -911,22 +910,22 @@ if __name__ == "__main__":
 
     D, thermal_conductivity, specific_heat, density, mu = define_materials_properties(V0, data, volume_marker, solve_heat_transfer, solve_diffusion, solve_laminar_flow)
     
-
-    ### Unknown and test functions
-    (v_, q_) = TestFunctions(W)
-    w = Function(W)
-    (u_stationary, p_stationary) = split(w)
-    u_n = Function(V2)
-    u_  = Function(V2)
-    p_n = Function(Q)
-    p_  = Function(Q)
-    u = TrialFunction(V2)
-    v = TestFunction(V2)
-    p = TrialFunction(Q)
-    q = TestFunction(Q)
-    U   = 0.5*(u_n + u)
-    f   = Constant((0, 0, 0))
-    k   = Constant(dt)
+    if solve_laminar_flow is True:
+        ### Unknown and test functions
+        (v_, q_) = TestFunctions(W)
+        w = Function(W)
+        (u_stationary, p_stationary) = split(w)
+        u_n = Function(V2)
+        u_  = Function(V2)
+        p_n = Function(Q)
+        p_  = Function(Q)
+        u = TrialFunction(V2)
+        v = TestFunction(V2)
+        p = TrialFunction(Q)
+        q = TestFunction(Q)
+        U   = 0.5*(u_n + u)
+        f   = Constant((0, 0, 0))
+        k   = Constant(dt)
 
     F = define_variational_problem_diffusion(solve_diffusion, solve_transient, dt, solve_with_decay, V, Neumann_BC_c_diffusion, Robin_BC_c_diffusion, Source_c_diffusion)
 
