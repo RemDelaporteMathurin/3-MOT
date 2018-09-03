@@ -1,0 +1,104 @@
+{
+  "quality" : "5",
+  "scaling" : "0.01",
+  "mesh_file" : "Problems/Tuto/Geometry/mesh_tuto.xdmf",
+  "output_file" : "Problems/Tuto/Solution/solution.pvd",
+  "structure_and_materials": {
+    "project_files":"Problems/Tuto/Geometry/my_geometry.cub",
+    "materials":[
+      {
+        "volumes":[1],
+        "material":"steel"
+      },
+      {
+        "volumes":[2],
+        "material":"concrete"
+      }
+    ]
+  },
+
+  "physics": {
+    "solve_with_decay":1,
+
+
+    "solve_tritium_diffusion":1,
+    "solve_laminar_flow":0,
+    "solve_heat_transfer":1,
+
+    "diffusion_coeff_temperature_dependent":0,
+    "couple_tritium_diffusion_heat_transfer":1,
+    "couple_tritium_diffusion_laminar_flow":0,
+    "couple_heat_transfer_laminar_flow":0,
+
+
+    "heat_transfers":{
+      "update_properties":0,
+      "boundary_conditions":{
+        "neumann":[
+            ],
+        "dc":[
+        {
+          "surface":[10],
+          "value":"300+10*x[0]+10*x[1]"
+        }],
+        "robin":[
+        ]
+      },
+      "initial_value":295.15, 
+      "source_terms":[
+      ]
+    },
+
+
+    "tritium_diffusion":{
+      "update_properties":1,
+      "boundary_conditions":{
+        "neumann":[
+            ],
+        "dc":[
+          {
+            "surface":[10],
+            "value":"26"
+          },
+          {
+            "surface":[1],
+            "value":"26"
+          }],
+        "robin":[
+          
+        ]
+      },
+      "initial_value":0, 
+      "source_terms":[
+        {
+          "volumes":[1,2],
+          "value":"0"
+        }
+      ]
+    }
+  },
+  "solving_parameters":{
+    "study":"transient",
+    "final_time":100000, 
+    "number_of_time_steps":10
+  },
+  "post_processing":{
+    "heat_transfers":{
+      "surface_flux":[],
+      "volume_average":[],
+      "volume_minimum":[],
+      "volume_maximum":[],
+      "custom":[],
+      "output_file":"Problems/RCB/post-processingHT.csv"
+    },
+    "tritium_diffusion":{
+      "surface_flux":[10,2],
+      "volume_average":[1],
+      "volume_minimum":[1],
+      "volume_maximum":[1],
+      "custom":["assemble(solution*ds(2))"],
+      "output_file":"Problems/Tuto/post-processing-tritium-diffusion.csv"
+    }
+  }
+}
+  

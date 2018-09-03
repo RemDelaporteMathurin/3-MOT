@@ -20,7 +20,8 @@ from materials_properties import calculate_D, calculate_thermal_conductivity, ca
 
 
 def get_apreprovars(apreprovars):
-    return 'Problems/RCB/Parameters/MOT_parameters_RCB.json'
+    #return 'Problems/RCB/Parameters/MOT_parameters_RCB.json'
+    return 'Problems/Tuto/Parameters/parameters_tuto.json'
     #return 'Problems/Breeder_Blanket/Parameters/MOT_parameters_breeder_blankets.json'
     #return 'Problems/Square_Pipe/Parameters/MOT_parameters_square_pipe.json'
     #return 'MOT_parameters_breeder_blankets_connected.json'
@@ -847,18 +848,7 @@ def solving(data,
 
 
     else:
-        (v_, q_) = TestFunctions(W)
-        w = Function(W)
-        (u, p) = split(w)
-        ### Steady Part of the Momentum Equation
-        def steady(u, dx_fluid):
-            T = -p*I + 2*mu*sym(grad(u))
-            return (inner(grad(u)*u, v_) + inner(T, grad(v_)) - inner(f, v_)) * dx_fluid
-        I = Identity(u.geometric_dimension())
-        F = steady(u, dx_fluid) + q_*div(u)*dx_fluid
-        J = derivative(F, w)
-        problem = NonlinearVariationalProblem(F, w, bcs_stationary, J)
-        solver = NonlinearVariationalSolver(problem)
+        
         output_file = File(data["output_file"])
         if solve_heat_transfer is True:
             T = Function(V)
@@ -871,6 +861,18 @@ def solving(data,
           output_file << (c, 0.0)
           post_processing(data, c, "tritium_diffusion", header_tritium_diffusion, values_tritium_diffusion, 0, ds, dx, volume_marker, D, n0)
         if solve_laminar_flow is True:
+            (v_, q_) = TestFunctions(W)
+            w = Function(W)
+            (u, p) = split(w)
+            ### Steady Part of the Momentum Equation
+            def steady(u, dx_fluid):
+                T = -p*I + 2*mu*sym(grad(u))
+                return (inner(grad(u)*u, v_) + inner(T, grad(v_)) - inner(f, v_)) * dx_fluid
+            I = Identity(u.geometric_dimension())
+            F = steady(u, dx_fluid) + q_*div(u)*dx_fluid
+            J = derivative(F, w)
+            problem = NonlinearVariationalProblem(F, w, bcs_stationary, J)
+            solver = NonlinearVariationalSolver(problem)
             solver.solve()
             (u, p) = w.split()
             output_file << (u, 0.0)
@@ -911,7 +913,6 @@ if __name__ == "__main__":
 
     D, thermal_conductivity, specific_heat, density, mu = define_materials_properties(V0, data, volume_marker, solve_heat_transfer, solve_diffusion, solve_laminar_flow)
     
-
     ### Unknown and test functions
     (v_, q_) = TestFunctions(W)
     w = Function(W)
