@@ -849,18 +849,7 @@ def solving(data,
 
 
     else:
-        (v_, q_) = TestFunctions(W)
-        w = Function(W)
-        (u, p) = split(w)
-        ### Steady Part of the Momentum Equation
-        def steady(u, dx_fluid):
-            T = -p*I + 2*mu*sym(grad(u))
-            return (inner(grad(u)*u, v_) + inner(T, grad(v_)) - inner(f, v_)) * dx_fluid
-        I = Identity(u.geometric_dimension())
-        F = steady(u, dx_fluid) + q_*div(u)*dx_fluid
-        J = derivative(F, w)
-        problem = NonlinearVariationalProblem(F, w, bcs_stationary, J)
-        solver = NonlinearVariationalSolver(problem)
+
         output_file = File(data["output_file"])
         if solve_heat_transfer is True:
             T = Function(V)
@@ -873,6 +862,18 @@ def solving(data,
           output_file << (c, 0.0)
           post_processing(data, c, "tritium_diffusion", header_tritium_diffusion, values_tritium_diffusion, 0, ds, dx, volume_marker, D, n0)
         if solve_laminar_flow is True:
+            (v_, q_) = TestFunctions(W)
+            w = Function(W)
+            (u, p) = split(w)
+            ### Steady Part of the Momentum Equation
+            def steady(u, dx_fluid):
+                T = -p*I + 2*mu*sym(grad(u))
+                return (inner(grad(u)*u, v_) + inner(T, grad(v_)) - inner(f, v_)) * dx_fluid
+            I = Identity(u.geometric_dimension())
+            F = steady(u, dx_fluid) + q_*div(u)*dx_fluid
+            J = derivative(F, w)
+            problem = NonlinearVariationalProblem(F, w, bcs_stationary, J)
+            solver = NonlinearVariationalSolver(problem)
             solver.solve()
             (u, p) = w.split()
             output_file << (u, 0.0)
