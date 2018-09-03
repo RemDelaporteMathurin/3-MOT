@@ -79,25 +79,12 @@ def initiate_density_interpolation():
             "lithium_lead": interpolated_lithium_lead_density,
             "eurofer": interpolated_eurofer_density}
 
-for entry
 
-def initiate_viscosity_interpolation():
-
-
-    # "water":
-    #temperature_c = [2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 45, 50, 55, 60, 65, 70, 75, 80]
-    temperature_k = [275.15, 275.15, 276.15, 277.15, 278.15, 279.15, 280.15, 281.15, 282.15, 283.15, 284.15, 285.15, 286.15, 287.15, 288.15, 289.15, 290.15, 291.15, 292.15, 293.15, 294.15, 295.15, 296.15, 297.15, 298.15, 299.15, 300.15, 301.15, 302.15, 303.15, 304.15, 305.15, 306.15, 307.15, 308.15, 309.15, 310.15, 311.15, 312.15, 313.15, 318.15, 323.15, 328.15, 333.15, 338.15, 343.15, 348.15, 353.15]
-    density =       [7760,   7753,   7740,   7727,   7713,   7699,   7685,   7670,   7655,   7640,   7625,   7610, 7594]
-    interpolated_water_viscosity = scipy_interpolate.interp1d(temperature_k, density) 
-
-
-    return {"water": interpolated_water_viscosity}
 
 
 thermal_conductivities_dict = initiate_thermal_conductivity_interpolation()
 specific_heat_dict = initiate_specific_heat_interpolation()
 density_dict = initiate_density_interpolation()
-viscosity_dict = initiate_viscosity_interpolation()
 
 def calculate_D(T, material_id):
     R = 8.314  # Perfect gas constant
