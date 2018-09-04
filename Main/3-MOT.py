@@ -15,13 +15,13 @@ import inspect
 import math
 from scipy import interpolate as scipy_interpolate
 from collections import Iterable
-
+import matplotlib.pyplot as plt
 from materials_properties import calculate_D, calculate_thermal_conductivity, calculate_specific_heat, calculate_density, calculate_mu
 
 
 def get_apreprovars(apreprovars):
-    #return 'Problems/RCB/Parameters/MOT_parameters_RCB.json'
-    return 'Problems/Tuto/Parameters/parameters_tuto.json'
+    return 'Problems/RCB/Parameters/MOT_parameters_RCB.json'
+    #return 'Problems/Tuto/Parameters/parameters_tuto.json'
     #return 'Problems/Breeder_Blanket/Parameters/MOT_parameters_breeder_blankets.json'
     #return 'Problems/Square_Pipe/Parameters/MOT_parameters_square_pipe.json'
     #return 'MOT_parameters_breeder_blankets_connected.json'
@@ -337,13 +337,45 @@ def define_initial_values(solve_heat_transfer, solve_diffusion, data, V):
     T_n = Function(V)
     if solve_diffusion is True:
         print('Defining initial values tritium diffusion')
-        iniC = Expression(str(data['physics']['tritium_diffusion']['initial_value']), degree=2)
-        c_n = interpolate(iniC, V)
+        if type(data['physics']['tritium_diffusion']['initial_value']) is not str:
+            for initial_value in data['physics']['tritium_diffusion']['initial_value']:
+                if (type(initial_value['value']) is not float) and (type(initial_value['value']) is not int):
+                    print(type(initial_value['value']))
+                    raise ValueError("!!ERROR!! initial value expected to be a number (int or float)")
+                else:
+                    value = initial_value['value']
+
+                v0 = Function(V0)
+                for cell in cells(mesh):
+                    if volume_marker[cell] in initial_value['volumes']:
+                        v0.vector()[cell.index()] = value
+                c_n = project(v0, V)
+        else:
+            iniC = Expression(str(data['physics']['tritium_diffusion']['initial_value']), degree=2)
+            c_n = interpolate(iniC, V)
     # #Temperature
     if solve_heat_transfer is True:
         print('Defining initial values heat transfer')
-        iniT = Expression(str(data['physics']['heat_transfers']['initial_value']), degree=2)
-        T_n = interpolate(iniT, V)
+        if (type(data['physics']['heat_transfers']['initial_value']) is not str) \
+        and (type(data['physics']['heat_transfers']['initial_value']) is not float) \
+        and (type(data['physics']['heat_transfers']['initial_value']) is not int):
+            print('Coucou')
+            for initial_value in data['physics']['heat_transfers']['initial_value']:
+                if (type(initial_value['value']) is not float) and (type(initial_value['value']) is not int):
+                    print(type(initial_value['value']))
+                    raise ValueError("!!ERROR!! initial value expected to be a number (int or float)")
+                else:
+                    value = initial_value['value']
+
+                v0 = Function(V0)
+                for cell in cells(mesh):
+                    if volume_marker[cell] in initial_value['volumes']:
+                        v0.vector()[cell.index()] = value
+                T_n = project(v0, V)
+        else:
+            iniT = Expression(str(data['physics']['heat_transfers']['initial_value']), degree=2)
+            T_n = interpolate(iniT, V)
+
     return c_n, T_n
 
 
