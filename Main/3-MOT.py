@@ -123,7 +123,6 @@ def get_volume_markers(mesh, xdmf_in):
     # read in the volume markers
     volume_marker_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
     xdmf_in.read(volume_marker_mvc, "volume_marker_volume_id")
-    print('Coucou')
 
     volume_marker = MeshFunction("size_t", mesh, volume_marker_mvc)
     dx = Measure('dx', domain=mesh, subdomain_data=volume_marker)
@@ -212,7 +211,7 @@ def define_functionspaces(data, mesh, mesh_fluid):
         TH = MixedElement([V3, P])
         W  = FunctionSpace(mesh_fluid, TH)
     else:
-        Q = FunctionSpace(mesh, 'P', 1)  # Functionspace of pressure
+        Q =  FunctionSpace(mesh, 'P', 1)  # Functionspace of pressure
         V2 = VectorFunctionSpace(mesh, 'P', 2)  # FunctionSpace of velocity
         V3  = VectorElement('P', mesh.ufl_cell(), 2)
         P  = FiniteElement('P', mesh.ufl_cell(), 1)
@@ -337,16 +336,20 @@ def define_initial_values(solve_heat_transfer, solve_diffusion, data, V):
     T_n = Function(V)
     if solve_diffusion is True:
         print('Defining initial values tritium diffusion')
-        if type(data['physics']['tritium_diffusion']['initial_value']) is not str:
+        if (type(data['physics']['tritium_diffusion']['initial_value']) is not str) \
+        and (type(data['physics']['tritium_diffusion']['initial_value']) is not float) \
+        and (type(data['physics']['tritium_diffusion']['initial_value']) is not int):
+
             for initial_value in data['physics']['tritium_diffusion']['initial_value']:
                 if (type(initial_value['value']) is not float) and (type(initial_value['value']) is not int):
                     print(type(initial_value['value']))
                     raise ValueError("!!ERROR!! initial value expected to be a number (int or float)")
                 else:
                     value = initial_value['value']
-
+                n =0
                 v0 = Function(V0)
                 for cell in cells(mesh):
+                    n += 1
                     if volume_marker[cell] in initial_value['volumes']:
                         v0.vector()[cell.index()] = value
                 c_n = project(v0, V)
@@ -804,7 +807,6 @@ def time_stepping(data,
             # Update previous solution
             u_n.assign(u_)
             p_n.assign(p_)
-            print(u_(0,0,0))
         if solve_heat_transfer is True:
             update_source_term(t, 'heat_transfers', Source_c_diffusion, Source_T_diffusion)
             solve(lhs(FT) == rhs(FT), T, bcs_T)
