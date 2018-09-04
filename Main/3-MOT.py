@@ -337,7 +337,6 @@ def define_initial_values(solve_heat_transfer, solve_diffusion, data, V):
     T_n = Function(V)
     if solve_diffusion is True:
         print('Defining initial values tritium diffusion')
-        print(type(data['physics']['tritium_diffusion']['initial_value']))
         if (type(data['physics']['tritium_diffusion']['initial_value']) is not str) \
         and (type(data['physics']['tritium_diffusion']['initial_value']) is not float) \
         and (type(data['physics']['tritium_diffusion']['initial_value']) is not int):
@@ -355,7 +354,6 @@ def define_initial_values(solve_heat_transfer, solve_diffusion, data, V):
                         v0.vector()[cell.index()] = value
                 c_n = project(v0, V)
         else:
-            print('Coucou')
             iniC = Expression(str(data['physics']['tritium_diffusion']['initial_value']), degree=2)
             c_n = interpolate(iniC, V)
     # #Temperature
