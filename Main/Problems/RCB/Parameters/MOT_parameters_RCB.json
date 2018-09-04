@@ -1,13 +1,13 @@
 {
   "quality" : "5",
   "scaling" : "1",
-  "mesh_file" : "Problems/RCB/Geometry/mesh_RCB.xdmf",
+  "mesh_file" : "Problems/RCB/Geometry/mesh_RCB_full.xdmf",
   "output_file" : "Problems/RCB/Solution/solution.pvd",
   "structure_and_materials": {
-    "project_files":["Problems/RCB/Geometry/concrete.stp", "Problems/RCB/Geometry/polymer.stp", "Problems/RCB/Geometry/steel.stp"],
+    "project_files":"Problems/RCB/Geometry/RCB_full.cub",
     "materials":[
       {
-        "volumes":[1],
+        "volumes":[1,4],
         "material":"concrete"
       },
       {
@@ -24,7 +24,7 @@
     "solve_with_decay":1,
     "solve_tritium_diffusion":1,
     "solve_laminar_flow":0,
-    "solve_heat_transfer":1,
+    "solve_heat_transfer":0,
     "diffusion_coeff_temperature_dependent":0,
     "couple_tritium_diffusion_heat_transfer":1,
     "couple_tritium_diffusion_laminar_flow":0,
@@ -54,10 +54,6 @@
         "neumann":[
             ],
         "dc":[
-          {
-            "surface":[31,32,33,34,35,36],
-            "value":"exp(-t*log(2)/(12.3*365.25*24*3600))"
-          }
         ],
         "robin":[
           {
@@ -67,12 +63,12 @@
           
         ]
       },
-      "initial_value":0, 
+      "initial_value":[{
+          "volumes":[4],
+          "value":1
+        }], 
       "source_terms":[
-        {
-          "volumes":[1,2,3],
-          "value":"0"
-        }
+        
       ]
     }
   },
