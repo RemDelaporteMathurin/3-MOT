@@ -20,7 +20,8 @@ from materials_properties import calculate_D, calculate_thermal_conductivity, ca
 
 
 def get_apreprovars(apreprovars):
-    return 'Problems/RCB/Parameters/MOT_parameters_RCB.json'
+    #return 'Problems/RCB/Parameters/MOT_parameters_RCB.json'
+    return 'Problems/HCLL_flow/Parameters/MOT_parameters_HCLL_flow.json'
     #return 'Problems/Breeder_Blanket/Parameters/MOT_parameters_breeder_blankets.json'
     #return 'Problems/Square_Pipe/Parameters/MOT_parameters_square_pipe.json'
     #return 'MOT_parameters_breeder_blankets_connected.json'
@@ -174,7 +175,7 @@ def define_mesh(data, solve_laminar_flow):
 
         n = 0
         for c in cells(mesh_fluid):
-            print(str(100*n/len(ncells_fluid))+' %', end='\r')
+            print(str(round(100*n/len(ncells_fluid),1))+' %', end='\r')
             parent_cell = Cell(mesh, cmap[c.index()])
             volume_marker_fluid.array()[c.index()] = volume_marker.array()[parent_cell.index()]
 
@@ -391,18 +392,22 @@ def define_materials_properties(V0, data, volume_marker, solve_heat_transfer, so
     specific_heat = Function(V0)
     density = Function(V0)
     mu = Function(V0)
+    Temp = float(data['physics']['heat_transfers']['initial_value'])
+    n = 0
     # #Assigning each to each cell its properties
     for cell_no in range(len(volume_marker.array())):
+        n += 1
+        print(str(round(100 * n / len(volume_marker.array()),1)) + ' %', end='\r')
         volume_id = volume_marker.array()[cell_no]  # This is the volume id (Trelis)
         material_id = which_material_is_it(volume_id, data)
         if solve_heat_transfer is True:
-            thermal_conductivity.vector()[cell_no] = calculate_thermal_conductivity(data['physics']['heat_transfers']['initial_value'], material_id)
-            density.vector()[cell_no] = calculate_density(data['physics']['heat_transfers']['initial_value'], material_id)
-            specific_heat.vector()[cell_no]=calculate_specific_heat(data['physics']['heat_transfers']['initial_value'], material_id)
+            thermal_conductivity.vector()[cell_no] = calculate_thermal_conductivity(Temp, material_id)
+            density.vector()[cell_no] = calculate_density(Temp, material_id)
+            specific_heat.vector()[cell_no]=calculate_specific_heat(Temp, material_id)
         if solve_diffusion is True:
-            D.vector()[cell_no] = calculate_D(data['physics']['heat_transfers']['initial_value'], material_id)
+            D.vector()[cell_no] = calculate_D(Temp, material_id)
         if solve_laminar_flow is True:
-            mu.vector()[cell_no] = calculate_mu(data['physics']['heat_transfers']['initial_value'], material_id)
+            mu.vector()[cell_no] = calculate_mu(Temp, material_id)
         # print(D.vector()[cell_no])
     return D, thermal_conductivity, specific_heat, density, mu
 
