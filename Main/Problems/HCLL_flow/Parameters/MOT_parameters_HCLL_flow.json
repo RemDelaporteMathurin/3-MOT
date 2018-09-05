@@ -27,13 +27,14 @@
 
    "physics": {
       "solve_with_decay":0,
-      "solve_tritium_diffusion":1,
-      "solve_heat_transfer":1,
+      "solve_tritium_diffusion":0,
+      "solve_heat_transfer":0,
       "solve_laminar_flow":1,
       "couple_tritium_diffusion_heat_transfer":0,
       "couple_tritium_diffusion_laminar_flow":0,
 "couple_heat_transfer_laminar_flow":0,
       "heat_transfers":{
+        "update_properties":0,
         "boundary_conditions":{
           "neumann":[
             {
@@ -66,6 +67,7 @@
         ] 
       },
       "tritium_diffusion":{
+        "update_properties":1,
         "boundary_conditions":{
           "neumann":[
               ],
@@ -97,27 +99,24 @@
         ] 
       },
       "laminar_flow":{
+        "update_properties":0,
         "volumes":[31],
-        "boundary_conditions_velocity":{
-          "dc":[
+        "boundary_conditions_velocity":[
             {
-              "valuex":0,
-              "valuey":0,
-              "valuez":1,
+              "valuex":"0",
+              "valuey":"0",
+              "valuez":"0.001",
               "surface":[319]
             },
             {
-              "valuex":0,
-              "valuey":0,
-              "valuez":0,
+              "valuex":"0",
+              "valuey":"0",
+              "valuez":"0",
               "surface":[320,311,312,317,324,307,322,318,313,52,41,55,39,47]
             }
+          ],
+        "boundary_conditions_pressure":[
           ]
-        },
-        "boundary_conditions_pressure":{
-          "dc":[
-          ]
-        }
       }
   },
   "solving_parameters":{
