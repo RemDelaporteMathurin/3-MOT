@@ -2,7 +2,7 @@
     "quality" : 5,
     "scaling" : 0.001,
 
-    "mesh_file" : "Geometry/mesh_breeder_blankets_quality_5.xdmf",
+    "mesh_file" : "Geometry/mesh_breeder_blankets_quality_1.xdmf",
 
 
     "output_file" : "solution.pvd",
