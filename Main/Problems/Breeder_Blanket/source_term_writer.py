@@ -34,7 +34,7 @@ r = return_distance_to_surface(a = 0.9908270,
 D = - 0.9908270 * 12.110082 - 0.1158111 * 1.411025 - (-0.06940) * 0.020152
 print('D = ', D)
 
-data = mot.get_databases('Parameters/MOT_parameters_breeder_blankets.json')
+data = mot.get_databases('Parameters/MOT_parameters_breeder_blankets (copy).json')
 mesh, n0, volume_marker, dx, surface_marker, ds, mesh_fluid, volume_marker_fluid, dx_fluid, surface_marker_fluid, ds_fluid, n_fluid = mot.define_mesh(data, False)
 
 V0 = FunctionSpace(mesh, 'DG', 0)
@@ -57,10 +57,10 @@ for cell in cells(mesh):
                            z = coord[2])
     if material_id == 'eurofer':
         #Q.vector()[cell.index()] = 1      
-        Q.vector()[cell.index()] = 16.08e6*np.exp(-11.3*r)
+        Q.vector()[cell.index()] = 16.08e6*2.3/3.3*np.exp(-11.3*r)
     elif material_id == 'lithium_lead':
         #Q.vector()[cell.index()] = 2      
-        Q.vector()[cell.index()] = 9.96e6*np.exp(-5.23*r) + 19.27e6*np.exp(-20.56*r)
+        Q.vector()[cell.index()] = 9.96e6*2.3/3.3*np.exp(-5.23*r) + 19.27e6*2.3/3.3*np.exp(-20.56*r)
     elif material_id == 'tungsten':
         Q.vector()[cell.index()] = 0
     else:
@@ -68,11 +68,6 @@ for cell in cells(mesh):
     n += 1
 
 
-File('volumetric_source_term.xml') << Q
-File('volumetric_source_term_mesh.xml') << mesh
-File('volumetric_source_term.pvd') << Q
-
-mesh = Mesh('volumetric_source_term_mesh.xml')
-plot(mesh)
-plt.show()
-
+File('volumetric_source_term_quality5.xml') << Q
+File('volumetric_source_term_mesh_quality5.xml') << mesh
+File('volumetric_source_term_quality5.pvd') << Q
