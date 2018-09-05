@@ -34,7 +34,7 @@ r = return_distance_to_surface(a = 0.9908270,
 D = - 0.9908270 * 12.110082 - 0.1158111 * 1.411025 - (-0.06940) * 0.020152
 print('D = ', D)
 
-data = mot.get_databases('Parameters/MOT_parameters_breeder_blankets (copy).json')
+data = mot.get_databases('MOT_parameters_breeder_blankets (copy).json')
 mesh, n0, volume_marker, dx, surface_marker, ds, mesh_fluid, volume_marker_fluid, dx_fluid, surface_marker_fluid, ds_fluid, n_fluid = mot.define_mesh(data, False)
 
 V0 = FunctionSpace(mesh, 'DG', 0)
