@@ -5,6 +5,7 @@
 - [Design goals](#design-goals)
 - [Features](#features)
 - [Installation](#installation)
+- [My first simulation](#my-first-simulation)
 - [Todo](#todo)
 
 
@@ -27,6 +28,9 @@
     - Averages
     - Minimum/Maximum
     - Custom computations
+- XDMF meshing
+    - From CAD files
+    - From Trelis/Cubit projects
 
 # Installation
 - 3-MOT
@@ -150,8 +154,8 @@ The next step is now to define the solving parameters in the key ```"solving_par
 ```js
 "solving_parameters":{
     "study":"transient",
-    "final_time":2e9, 
-    "number_of_time_steps":50
+    "final_time":30000, 
+    "number_of_time_steps":100
   }
 ```
 
@@ -172,17 +176,32 @@ The solution file path is stored in the key ```"output_file":```. In our case it
 "output_file":"Examples/Cube_tuto/Solution/solution.pvd"
 ```
 
+Both the temperature and tritium concentration fields will be stored in this file.
+
 ### Step 5.2 : Define the post processing computations (optionnal)
-Post computing is facilitate in 3-MOT. Surface fluxes, averages, minimum values and maximum values can be computed. You can even compute your own custom expression. 
+Post computing is facilitate in 3-MOT. Surface fluxes, averages, minimum values and maximum values can be computed for each solution. You can even compute your own custom expression. 
+
+```js
+"post_processing":{
+    "heat_transfers":{
+      "surface_flux":[2],
+      "volume_average":[],
+      "volume_minimum":[1],
+      "volume_maximum":[1],
+      "custom":[],
+      "output_file":"Examples/Cube_tuto/post-processingHT.csv"
+    },
+    "tritium_diffusion":{
+      "surface_flux":[1,2,3],
+      "volume_average":[2],
+      "volume_minimum":[],
+      "volume_maximum":[],
+      "custom":["assemble(solution*dx(1))"],
+      "output_file":"Examples/Cube_tuto/post-processing-tritium-diffusion_quality5.csv"
+      }
+```
 
 # ToDo
-
-
-
-
-
-
-
-
-
-
+- Meshing grom GMSH
+- Write more tests
+- Write more tutorials
