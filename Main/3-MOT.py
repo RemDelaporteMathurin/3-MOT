@@ -15,12 +15,13 @@ import inspect
 import math
 from scipy import interpolate as scipy_interpolate
 from collections import Iterable
-
+import matplotlib.pyplot as plt
 from materials_properties import calculate_D, calculate_thermal_conductivity, calculate_specific_heat, calculate_density, calculate_mu
 
 
 def get_apreprovars(apreprovars):
     return 'Problems/RCB/Parameters/MOT_parameters_RCB.json'
+    #return 'Problems/Tuto/Parameters/parameters_tuto.json'
     #return 'Problems/Breeder_Blanket/Parameters/MOT_parameters_breeder_blankets.json'
     #return 'Problems/Square_Pipe/Parameters/MOT_parameters_square_pipe.json'
     #return 'MOT_parameters_breeder_blankets_connected.json'
@@ -122,7 +123,6 @@ def get_volume_markers(mesh, xdmf_in):
     # read in the volume markers
     volume_marker_mvc = MeshValueCollection("size_t", mesh, mesh.topology().dim())
     xdmf_in.read(volume_marker_mvc, "volume_marker_volume_id")
-    print('Coucou')
 
     volume_marker = MeshFunction("size_t", mesh, volume_marker_mvc)
     dx = Measure('dx', domain=mesh, subdomain_data=volume_marker)
@@ -211,7 +211,7 @@ def define_functionspaces(data, mesh, mesh_fluid):
         TH = MixedElement([V3, P])
         W  = FunctionSpace(mesh_fluid, TH)
     else:
-        Q = FunctionSpace(mesh, 'P', 1)  # Functionspace of pressure
+        Q =  FunctionSpace(mesh, 'P', 1)  # Functionspace of pressure
         V2 = VectorFunctionSpace(mesh, 'P', 2)  # FunctionSpace of velocity
         V3  = VectorElement('P', mesh.ufl_cell(), 2)
         P  = FiniteElement('P', mesh.ufl_cell(), 1)
@@ -336,13 +336,49 @@ def define_initial_values(solve_heat_transfer, solve_diffusion, data, V):
     T_n = Function(V)
     if solve_diffusion is True:
         print('Defining initial values tritium diffusion')
-        iniC = Expression(str(data['physics']['tritium_diffusion']['initial_value']), degree=2)
-        c_n = interpolate(iniC, V)
+        if (type(data['physics']['tritium_diffusion']['initial_value']) is not str) \
+        and (type(data['physics']['tritium_diffusion']['initial_value']) is not float) \
+        and (type(data['physics']['tritium_diffusion']['initial_value']) is not int):
+
+            for initial_value in data['physics']['tritium_diffusion']['initial_value']:
+                if (type(initial_value['value']) is not float) and (type(initial_value['value']) is not int):
+                    print(type(initial_value['value']))
+                    raise ValueError("!!ERROR!! initial value expected to be a number (int or float)")
+                else:
+                    value = initial_value['value']
+                n =0
+                v0 = Function(V0)
+                for cell in cells(mesh):
+                    n += 1
+                    if volume_marker[cell] in initial_value['volumes']:
+                        v0.vector()[cell.index()] = value
+                c_n = project(v0, V)
+        else:
+            iniC = Expression(str(data['physics']['tritium_diffusion']['initial_value']), degree=2)
+            c_n = interpolate(iniC, V)
     # #Temperature
     if solve_heat_transfer is True:
         print('Defining initial values heat transfer')
-        iniT = Expression(str(data['physics']['heat_transfers']['initial_value']), degree=2)
-        T_n = interpolate(iniT, V)
+        if (type(data['physics']['heat_transfers']['initial_value']) is not str) \
+        and (type(data['physics']['heat_transfers']['initial_value']) is not float) \
+        and (type(data['physics']['heat_transfers']['initial_value']) is not int):
+            print('Coucou')
+            for initial_value in data['physics']['heat_transfers']['initial_value']:
+                if (type(initial_value['value']) is not float) and (type(initial_value['value']) is not int):
+                    print(type(initial_value['value']))
+                    raise ValueError("!!ERROR!! initial value expected to be a number (int or float)")
+                else:
+                    value = initial_value['value']
+
+                v0 = Function(V0)
+                for cell in cells(mesh):
+                    if volume_marker[cell] in initial_value['volumes']:
+                        v0.vector()[cell.index()] = value
+                T_n = project(v0, V)
+        else:
+            iniT = Expression(str(data['physics']['heat_transfers']['initial_value']), degree=2)
+            T_n = interpolate(iniT, V)
+
     return c_n, T_n
 
 
@@ -771,7 +807,6 @@ def time_stepping(data,
             # Update previous solution
             u_n.assign(u_)
             p_n.assign(p_)
-            print(u_(0,0,0))
         if solve_heat_transfer is True:
             update_source_term(t, 'heat_transfers', Source_c_diffusion, Source_T_diffusion)
             solve(lhs(FT) == rhs(FT), T, bcs_T)
@@ -847,18 +882,7 @@ def solving(data,
 
 
     else:
-        (v_, q_) = TestFunctions(W)
-        w = Function(W)
-        (u, p) = split(w)
-        ### Steady Part of the Momentum Equation
-        def steady(u, dx_fluid):
-            T = -p*I + 2*mu*sym(grad(u))
-            return (inner(grad(u)*u, v_) + inner(T, grad(v_)) - inner(f, v_)) * dx_fluid
-        I = Identity(u.geometric_dimension())
-        F = steady(u, dx_fluid) + q_*div(u)*dx_fluid
-        J = derivative(F, w)
-        problem = NonlinearVariationalProblem(F, w, bcs_stationary, J)
-        solver = NonlinearVariationalSolver(problem)
+        
         output_file = File(data["output_file"])
         if solve_heat_transfer is True:
             T = Function(V)
@@ -871,6 +895,18 @@ def solving(data,
           output_file << (c, 0.0)
           post_processing(data, c, "tritium_diffusion", header_tritium_diffusion, values_tritium_diffusion, 0, ds, dx, volume_marker, D, n0)
         if solve_laminar_flow is True:
+            (v_, q_) = TestFunctions(W)
+            w = Function(W)
+            (u, p) = split(w)
+            ### Steady Part of the Momentum Equation
+            def steady(u, dx_fluid):
+                T = -p*I + 2*mu*sym(grad(u))
+                return (inner(grad(u)*u, v_) + inner(T, grad(v_)) - inner(f, v_)) * dx_fluid
+            I = Identity(u.geometric_dimension())
+            F = steady(u, dx_fluid) + q_*div(u)*dx_fluid
+            J = derivative(F, w)
+            problem = NonlinearVariationalProblem(F, w, bcs_stationary, J)
+            solver = NonlinearVariationalSolver(problem)
             solver.solve()
             (u, p) = w.split()
             output_file << (u, 0.0)
@@ -911,7 +947,6 @@ if __name__ == "__main__":
 
     D, thermal_conductivity, specific_heat, density, mu = define_materials_properties(V0, data, volume_marker, solve_heat_transfer, solve_diffusion, solve_laminar_flow)
     
-
     ### Unknown and test functions
     (v_, q_) = TestFunctions(W)
     w = Function(W)

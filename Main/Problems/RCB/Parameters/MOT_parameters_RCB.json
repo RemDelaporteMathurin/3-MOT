@@ -1,13 +1,13 @@
 {
   "quality" : "5",
   "scaling" : "1",
-  "mesh_file" : "Problems/RCB/Geometry/mesh_RCB.xdmf",
-  "output_file" : "Problems/RCB/Solution/solution.pvd",
+  "mesh_file" : "Problems/RCB/Geometry/mesh_RCB_quarter_quality5.xdmf",
+  "output_file" : "Problems/RCB/Solution/solution_quality_5.pvd",
   "structure_and_materials": {
-    "project_files":["Problems/RCB/Geometry/concrete.stp", "Problems/RCB/Geometry/polymer.stp", "Problems/RCB/Geometry/steel.stp"],
+    "project_files":"Problems/RCB/Geometry/RCB_quarter_quality5.cub",
     "materials":[
       {
-        "volumes":[1],
+        "volumes":[3,4],
         "material":"concrete"
       },
       {
@@ -15,7 +15,7 @@
         "material":"polymer"
       },
       {
-        "volumes":[3],
+        "volumes":[1],
         "material":"steel"
       }
     ]
@@ -24,12 +24,10 @@
     "solve_with_decay":1,
     "solve_tritium_diffusion":1,
     "solve_laminar_flow":0,
-    "solve_heat_transfer":1,
-    "diffusion_coeff_temperature_dependent":0,
+    "solve_heat_transfer":0,
     "couple_tritium_diffusion_heat_transfer":1,
     "couple_tritium_diffusion_laminar_flow":0,
     "couple_heat_transfer_laminar_flow":0,
-    "calculate_off_gassing":1,
     "heat_transfers":{
       "update_properties":0,
       "boundary_conditions":{
@@ -37,7 +35,7 @@
             ],
         "dc":[
           {
-            "surface":[1,2,3,4,5,6],
+            "surface":[4,17,19,20],
             "value":"14+273.15+7*cos(2*3.14*t/365.25/24/3600)+16*cos(2*3.14*t/24/3600)"
           }
         ],
@@ -49,37 +47,31 @@
       ]
     },
     "tritium_diffusion":{
-      "update_properties":1,
+      "update_properties":0,
       "boundary_conditions":{
         "neumann":[
             ],
         "dc":[
-          {
-            "surface":[31,32,33,34,35,36],
-            "value":"exp(-t*log(2)/(12.3*365.25*24*3600))"
-          }
         ],
-        "robin":[
-          {
-            "surface":[1,2,3,4,5,6],
-            "value":"conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))"
-          }
-          
-        ]
-      },
-      "initial_value":0, 
-      "source_terms":[
-        {
-          "volumes":[1,2,3],
-          "value":"0"
+        "robin":[{
+          "surface":[27,22,21],
+          "value":"conditional(gt(c_n, 0), 1.28e-10*(c_n)**0.74, Constant(0.0))"
         }
+      ]
+      },
+      "initial_value":[{
+          "volumes":[4],
+          "value":0.1
+        }], 
+      "source_terms":[
+        
       ]
     }
   },
   "solving_parameters":{
     "study":"transient",
     "final_time":2e9, 
-    "number_of_time_steps":1000
+    "number_of_time_steps":50
   },
   "post_processing":{
     "heat_transfers":{
@@ -91,12 +83,13 @@
       "output_file":"Problems/RCB/post-processingHT.csv"
     },
     "tritium_diffusion":{
-      "surface_flux":[],
+      "surface_flux":[27,22,21],
       "volume_average":[],
       "volume_minimum":[],
       "volume_maximum":[],
-      "custom":["assemble(c_n*ds(1))+assemble(c_n*ds(2))+assemble(c_n*ds(3))+assemble(c_n*ds(4))+assemble(c_n*ds(5))+assemble(c_n*ds(6))","assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(1))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(2))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(3))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(4))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(5))+assemble(conditional(gt(c_n, 0), 5.08e-6*(c_n)**0.74, Constant(0.0))*ds(6))"],
-      "output_file":"Problems/RCB/post-processing-tritium-diffusion.csv"
+      "custom":["assemble(solution*ds(27))+assemble(solution*ds(22))+assemble(solution*ds(21))",
+                "assemble(conditional(gt(c_n, 0), 1.28e-10*(c_n)**0.74, Constant(0.0))*ds(27))+assemble(conditional(gt(c_n, 0), 1.28e-10*(c_n)**0.74, Constant(0.0))*ds(22))+assemble(conditional(gt(c_n, 0),  1.28e-10*(c_n)**0.74, Constant(0.0))*ds(21))"],
+      "output_file":"Problems/RCB/post-processing-tritium-diffusion_quality5.csv"
     }
   }
 }
