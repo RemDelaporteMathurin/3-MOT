@@ -19,12 +19,12 @@ import matplotlib.pyplot as plt
 from materials_properties import calculate_D, calculate_thermal_conductivity, calculate_specific_heat, calculate_density, calculate_mu
 
 
-def get_apreprovars(apreprovars):
-    return 'Problems/RCB/Parameters/MOT_parameters_RCB.json'
-    #return 'Problems/Tuto/Parameters/parameters_tuto.json'
-    #return 'Problems/Breeder_Blanket/Parameters/MOT_parameters_breeder_blankets.json'
-    #return 'Problems/Square_Pipe/Parameters/MOT_parameters_square_pipe.json'
-    #return 'MOT_parameters_breeder_blankets_connected.json'
+def get_apreprovars():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("parameters", help="Specify the parameters file (JSON)",type=str)
+    args = parser.parse_args()
+    return str(args.parameters)
 
 
 def byteify(input):
