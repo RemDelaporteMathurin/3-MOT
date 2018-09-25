@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<VTKFile type="Collection" version="0.1">
+  <Collection>
+    <DataSet timestep="40000000" part="0" file="solution_quality_5000000.vtu" />
+    <DataSet timestep="80000000" part="0" file="solution_quality_5000001.vtu" />
+    <DataSet timestep="120000000" part="0" file="solution_quality_5000002.vtu" />
+    <DataSet timestep="160000000" part="0" file="solution_quality_5000003.vtu" />
+    <DataSet timestep="200000000" part="0" file="solution_quality_5000004.vtu" />
+    <DataSet timestep="240000000" part="0" file="solution_quality_5000005.vtu" />
+    <DataSet timestep="280000000" part="0" file="solution_quality_5000006.vtu" />
+    <DataSet timestep="320000000" part="0" file="solution_quality_5000007.vtu" />
+    <DataSet timestep="360000000" part="0" file="solution_quality_5000008.vtu" />
+    <DataSet timestep="400000000" part="0" file="solution_quality_5000009.vtu" />
+    <DataSet timestep="440000000" part="0" file="solution_quality_5000010.vtu" />
+    <DataSet timestep="480000000" part="0" file="solution_quality_5000011.vtu" />
+    <DataSet timestep="520000000" part="0" file="solution_quality_5000012.vtu" />
+    <DataSet timestep="560000000" part="0" file="solution_quality_5000013.vtu" />
+    <DataSet timestep="600000000" part="0" file="solution_quality_5000014.vtu" />
+    <DataSet timestep="640000000" part="0" file="solution_quality_5000015.vtu" />
+    <DataSet timestep="680000000" part="0" file="solution_quality_5000016.vtu" />
+    <DataSet timestep="720000000" part="0" file="solution_quality_5000017.vtu" />
+    <DataSet timestep="760000000" part="0" file="solution_quality_5000018.vtu" />
+    <DataSet timestep="800000000" part="0" file="solution_quality_5000019.vtu" />
+    <DataSet timestep="840000000" part="0" file="solution_quality_5000020.vtu" />
+    <DataSet timestep="880000000" part="0" file="solution_quality_5000021.vtu" />
+    <DataSet timestep="920000000" part="0" file="solution_quality_5000022.vtu" />
+    <DataSet timestep="960000000" part="0" file="solution_quality_5000023.vtu" />
+    <DataSet timestep="1000000000" part="0" file="solution_quality_5000024.vtu" />
+    <DataSet timestep="1040000000" part="0" file="solution_quality_5000025.vtu" />
+    <DataSet timestep="1080000000" part="0" file="solution_quality_5000026.vtu" />
+    <DataSet timestep="1120000000" part="0" file="solution_quality_5000027.vtu" />
+    <DataSet timestep="1160000000" part="0" file="solution_quality_5000028.vtu" />
+    <DataSet timestep="1200000000" part="0" file="solution_quality_5000029.vtu" />
+    <DataSet timestep="1240000000" part="0" file="solution_quality_5000030.vtu" />
+    <DataSet timestep="1280000000" part="0" file="solution_quality_5000031.vtu" />
+    <DataSet timestep="1320000000" part="0" file="solution_quality_5000032.vtu" />
+    <DataSet timestep="1360000000" part="0" file="solution_quality_5000033.vtu" />
+    <DataSet timestep="1400000000" part="0" file="solution_quality_5000034.vtu" />
+    <DataSet timestep="1440000000" part="0" file="solution_quality_5000035.vtu" />
+    <DataSet timestep="1480000000" part="0" file="solution_quality_5000036.vtu" />
+    <DataSet timestep="1520000000" part="0" file="solution_quality_5000037.vtu" />
+    <DataSet timestep="1560000000" part="0" file="solution_quality_5000038.vtu" />
+    <DataSet timestep="1600000000" part="0" file="solution_quality_5000039.vtu" />
+    <DataSet timestep="1640000000" part="0" file="solution_quality_5000040.vtu" />
+    <DataSet timestep="1680000000" part="0" file="solution_quality_5000041.vtu" />
+    <DataSet timestep="1720000000" part="0" file="solution_quality_5000042.vtu" />
+    <DataSet timestep="1760000000" part="0" file="solution_quality_5000043.vtu" />
+    <DataSet timestep="1800000000" part="0" file="solution_quality_5000044.vtu" />
+    <DataSet timestep="1840000000" part="0" file="solution_quality_5000045.vtu" />
+    <DataSet timestep="1880000000" part="0" file="solution_quality_5000046.vtu" />
+    <DataSet timestep="1920000000" part="0" file="solution_quality_5000047.vtu" />
+    <DataSet timestep="1960000000" part="0" file="solution_quality_5000048.vtu" />
+    <DataSet timestep="2000000000" part="0" file="solution_quality_5000049.vtu" />
+  </Collection>
+</VTKFile>
