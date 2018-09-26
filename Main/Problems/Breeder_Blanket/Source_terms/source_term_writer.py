@@ -57,14 +57,14 @@ for cell in cells(mesh):
                            z = coord[2])
     if material_id == 'eurofer':
         #Q.vector()[cell.index()] = 1      
-        Q.vector()[cell.index()] = 16.08e6*2.3/3.3*np.exp(-11.3*r)
+        Q.vector()[cell.index()] = 7.534822e6*np.exp(-8.988724*r)
     elif material_id == 'lithium_lead':
         #Q.vector()[cell.index()] = 2      
-        Q.vector()[cell.index()] = 9.96e6*2.3/3.3*np.exp(-5.23*r) + 19.27e6*2.3/3.3*np.exp(-20.56*r)
+        Q.vector()[cell.index()] = 9.460241e6*np.exp(-6.198768*r)
     elif material_id == 'tungsten':
-        Q.vector()[cell.index()] = 0
+        Q.vector()[cell.index()] = 23.20664e6*np.exp(-71.74517*r)
     else:
-        Q.vector()[cell.index()] = 10
+        Q.vector()[cell.index()] = 0
     n += 1
 
 
